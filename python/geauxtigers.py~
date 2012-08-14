@@ -1,0 +1,47 @@
+# This is module geauxtigers.
+# It contains some utilities for injection.
+
+import os, subprocess, threading
+
+def Source(script, update=1):
+	pipe = subprocess.Popen(". %s; env" % script, stdout=subprocess.PIPE, shell=True)
+	data = pipe.communicate()[0];
+	lines=[]
+	for line in data.splitlines():
+		l=line.split("=", 1)
+		if(len(l)==2): 
+			lines.append(l)
+	env = dict(lines)
+	print "%d environment variables." % len(lines)
+	if update:
+		os.environ.update(env)
+	return env
+
+def runTimed(timeout, cmd):
+	event = threading.Event()
+	pipe = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
+	killer = KillerThread(pipe.pid, pipe, timeout, event)
+	killer.start()
+	(out, err) = pipe.communicate()
+	event.set()
+	return (out, err, pipe.returncode)
+
+class KillerThread(threading.Thread):
+	def __init__(self, pid, pipe, timeout, event):
+		threading.Thread.__init__(self)
+		self.pid = pid
+		self.timeout = timeout
+		self.event = event
+		self.setDaemon(True)
+		self.pipe = pipe
+	
+	def run(self):
+		self.event.wait(self.timeout)
+		if not self.event.isSet():
+			try:
+				os.kill(self.pid, signal.SIGKILL)
+				self.pipe.kill();
+			except OSError, e:
+				print "OSError"
+				pass
+	
