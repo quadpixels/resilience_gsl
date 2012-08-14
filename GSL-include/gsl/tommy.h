@@ -18,11 +18,20 @@
 #include <sys/signal.h>
 #include <signal.h>
 #include <setjmp.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 extern jmp_buf buf;
 extern jmp_buf buf_1;
 extern jmp_buf buf_2;
+#ifdef __cplusplus
+}
+#endif
 
 /* To enable/disable verbose output */
+
+
 #define DEBUG
 #ifdef DEBUG    
 #define DBG(call) { call; }
@@ -37,12 +46,18 @@ extern jmp_buf buf_2;
 
 /* The SIGSEGV handler */
 #define UNWIND
+#ifdef __cplusplus
+extern "C" {
+#endif
 void MY_SET_SIGSEGV_HANDLER();
 void MY_REMOVE_SIGSEGV_HANDLER();
 void MY_SIGSEGV_HANDLER_SUMMARY();
 unsigned int GetJmpBufChecksum(jmp_buf*);
 void do_backtrace();
 void my_action(int sig);
+#ifdef __cplusplus
+}
+#endif
 
 /* The super sigsetjmp! */
 // To use this macro, you must declare a variable called 'int jmpret'.

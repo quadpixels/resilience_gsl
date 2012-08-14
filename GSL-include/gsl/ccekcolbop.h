@@ -29,10 +29,12 @@ extern "C" {
 
 #define DEBUG
 
+#ifndef DBG
 #ifdef DEBUG
 #define DBG(call) {call;}
 #else
 #define DBG(call) {}
+#endif
 #endif
 
 #define print_array(array, description, size) { \

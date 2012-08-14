@@ -4,15 +4,6 @@
 #include <signal.h>
 #include "real.h"
 
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-jmp_buf buf;
-#ifdef __cplusplus
-} // end of Extern C
-#endif
-
 #define FT_ROUTINES_VULN
 #ifdef FT_ROUTINES_VULN
 	#ifndef FT3TEST
@@ -40,7 +31,7 @@ void trick_me_jr(int jmpret) {
 	if(jmpret == 999) printf("Jack is in the box!\n");
 }
 
-static void* trick_me_ptr(void* ptr, int delta) {
+unsigned long trick_me_ptr(unsigned long ptr, int delta) {
 	return ptr + delta;
 }
 
@@ -72,13 +63,13 @@ static unsigned int GetMatrixChecksum(const gsl_matrix* m) {
 	if(in != s0) in = s0; \
 }
 	
-// in = whatever, r1, r2 are void*'s
+// in = whatever, r1, r2 are unsigned long's
 // We can't change the const gsl_matrix*, so we need make three copies,
 // and change these copies.
 #define TRIPLICATE(in, r0, r1, r2) \
-	r0 = trick_me_ptr((void*)in, 0); \
-	r1 = trick_me_ptr((void*)in, 123); \
-	r2 = trick_me_ptr((void*)in, 456);
+	r0 = trick_me_ptr((unsigned long)in, 0); \
+	r1 = trick_me_ptr((unsigned long)in, 123); \
+	r2 = trick_me_ptr((unsigned long)in, 456);
 
 #define TRI_RECOVER(r0, r1, r2) { \
 	if((r0 != r1-123) && (r1-123 == r2-456)) { r0 = r1-123; printf("[TRI_RECOVER] Corrected 1 element\n");} \
@@ -805,9 +796,9 @@ void GSL_BLAS_DGEMM_FT3(CBLAS_TRANSPOSE_t TransA, CBLAS_TRANSPOSE_t TransB,
 
 {
 	/* Protect the pointers to matrix A, B, C */
-	void *matA_0, *matA_1, *matA_2, 
-	     *matB_0, *matB_1, *matB_2,
-	     *matC_0, *matC_1, *matC_2;
+	unsigned long matA_0, matA_1, matA_2, 
+	     matB_0, matB_1, matB_2,
+	     matC_0, matC_1, matC_2;
 	TRIPLICATE(matA, matA_0, matA_1, matA_2);
 	TRIPLICATE(matB, matB_0, matB_1, matB_2);
 
@@ -827,12 +818,15 @@ void GSL_BLAS_DGEMM_FT3(CBLAS_TRANSPOSE_t TransA, CBLAS_TRANSPOSE_t TransB,
 	/* Protect the contents of matrix A, B and C (no data, of course) */
 	double sumA, sumB, sumC;
 	sumA=my_sum_matrix(matA); sumB=my_sum_matrix(matB); sumC=my_sum_matrix(matC); 
+	/* Protect the pointer to ECC codes. */
 	void* ecMatA, *ecMatB, *ecMatC;
+	unsigned long ema_0, ema_1, ema_2, emb_0, emb_1, emb_2, emc_0, emc_1, emc_2;
+	
 	nonEqualCount=0;
 	MY_SET_SIGSEGV_HANDLER();
 	gsl_matrix* matC_bak = gsl_matrix_alloc(matC->size1, matC->size2);
 	/* Protect matC_bak -> data */
-	void* mCbd_0, *mCbd_1, *mCbd_2;
+	unsigned long mCbd_0, mCbd_1, mCbd_2;
 	TRIPLICATE(matC_bak, matC_0, matC_1, matC_2);
 	TRIPLICATE(matC_bak->data, mCbd_0, mCbd_1, mCbd_2);
 	gsl_matrix_memcpy(matC_bak, matC);
@@ -841,25 +835,40 @@ void GSL_BLAS_DGEMM_FT3(CBLAS_TRANSPOSE_t TransA, CBLAS_TRANSPOSE_t TransB,
 	TRIPLICATE_SIZE_T(matC_bak->size2, mcs20, mcs21, mcs22);
 	int jmpret, isEqual;
 	encode((matA->data), (matA->size1*matA->size2), &ecMatA); 
+	TRIPLICATE(ecMatA, ema_0, ema_1, ema_2);
 	encode((matB->data), (matB->size1*matB->size2), &ecMatB);
+	TRIPLICATE(ecMatB, emb_0, emb_1, emb_2);
 	encode((matC->data), (matC->size1*matC->size2), &ecMatC);
+	TRIPLICATE(ecMatC, emc_0, emc_1, emc_2);
 	SUPERSETJMP("After encoding");
 	if(jmpret != 0) {
 		kk:
 		DBG(printf("[DGEMM_FT3]Recovering input...\n"));
 		{
+			/* Recover ptr to matA and matA's ecc */
 			TRI_RECOVER(matA_0, matA_1, matA_2);
 			size_t *mas1 = &(((gsl_matrix*)matA)->size1),
 			       *mas2 = &(((gsl_matrix*)matA)->size2);
 			TRI_RECOVER_SIZE_T((*mas1), mas10, mas11, mas12);
 			TRI_RECOVER_SIZE_T((*mas2), mas20, mas21, mas22);
+			TRI_RECOVER(ema_0, ema_1, ema_2);
+			if((long)ecMatA != ema_0) ecMatA = (void*)ema_0;
 			MY_MAT_CHK_RECOVER_POECC(sumA, ecMatA, (gsl_matrix*)matA_0);
+
+			/* Recover ptr to matB and matB's ecc */
 			TRI_RECOVER(matB_0, matB_1, matB_2);
 			size_t *mbs1 = &(((gsl_matrix*)matB)->size1),
 			       *mbs2 = &(((gsl_matrix*)matB)->size2);
 			TRI_RECOVER_SIZE_T((*mbs1), mbs10, mbs11, mbs12);
 			TRI_RECOVER_SIZE_T((*mbs2), mbs20, mbs21, mbs22);
+			TRI_RECOVER(emb_0, emb_1, emb_2);
+			if((long)ecMatB != emb_0) ecMatB = (void*)emb_0;
 			MY_MAT_CHK_RECOVER_POECC(sumB, ecMatB, (gsl_matrix*)matB_0);
+
+			/* Recover ptr to mat C and matC's ecc */
+			/* Mat C is special: its size1 and size2 are also 
+			 * vulnerable to soft errors therefore needs extra care
+			 */
 			TRI_RECOVER(matC_0, matC_1, matC_2);
 			TRI_RECOVER(mCbd_0, mCbd_1, mCbd_2);
 			if(matC_bak->data != (double*)mCbd_0)
@@ -869,9 +878,11 @@ void GSL_BLAS_DGEMM_FT3(CBLAS_TRANSPOSE_t TransA, CBLAS_TRANSPOSE_t TransB,
 			TRI_RECOVER_SIZE_T(matC->size1, mcs10, mcs11, mcs12);
 			TRI_RECOVER_SIZE_T(matC->size2, mcs20, mcs21, mcs22);
 			TRI_RECOVER_SIZE_T(matC_bak->tda, mcb0, mcb1, mcb2);
+			TRI_RECOVER(emc_0, emc_1, emc_2);
+			if((long)ecMatC != emc_0) ecMatC = (void*)emc_0;
 			MY_MAT_CHK_RECOVER_POECC(sumC, ecMatC, (gsl_matrix*)matC_0);
-			// Hack for Aug 13. I seriously doubt matC_bak is free()'d some time
-			// in the process.
+
+			//And there we have completed recovering it....
 			DBG(printf("[DGEMM_FT3]Copying back input...\n"));
 			gsl_matrix_memcpy(matC, matC_bak);
 		}
@@ -902,7 +913,7 @@ void GSL_BLAS_DGEMM_FT3(CBLAS_TRANSPOSE_t TransA, CBLAS_TRANSPOSE_t TransB,
 	SUPERSETJMP("Just before free");
 	if(jmpret == 0) {
 		TRI_RECOVER(matC_0, matC_1, matC_2);
-		gsl_matrix_free(matC_0);
+		gsl_matrix_free((gsl_matrix*)matC_0);
 		printf("Released.\n");
 		// Last, restore the sizes of elements in case there are corruptions
 		{
@@ -1121,7 +1132,7 @@ float MY_MAT_CHK_RECOVER_POECC(double sum, void* ecMat, gsl_matrix* mat) {
 		while(mat!=TRIO_DOUBLE(mat,mat1,mat2)) mat=TRIO_DOUBLE(mat,mat1,mat2);
 		while(ecMat!=TRIO_DOUBLE(ecMat,ecm1,ecm2)) ecMat=TRIO_DOUBLE(ecMat,ecm1,ecm2); 
 		unsigned int failed_corr = decode(mat->data, mat->size1*mat->size2, (const double*)ecMat);
-		DBG(printf("[Matrix RECOVER_POECC] FAILED corrections = %d out of %d\n", failed_corr, (mat->size1 * mat->size2)));
+		DBG(printf("[Matrix RECOVER_POECC] FAILED corrections = %d out of %d blocks\n", failed_corr, (int)((mat->size1 * mat->size2)/BLK_LEN)));
 		ret = (float)failed_corr / (mat->size1 * mat->size2);
 		my_stopwatch_stop(8);
 	} else {

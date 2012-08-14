@@ -132,7 +132,7 @@ FTV_REAL_TRY(0) {
 
 	/* If we need to correct the ECC itself first.... */
 	int i; for(i=0; i<ECCECC; i++) {
-		do_decode((void*)doc, 0, eccSize, doc, eccSize+eccEccSize*i, eccEccSize);
+		do_decode((double*)doc, 0, eccSize, doc, eccSize+eccEccSize*i, eccEccSize);
 	}
 
 	failed_corr = do_decode(patient, 0, lenPatient, doc, 0, eccSize); /* lenDoc in num of elements */
@@ -179,7 +179,8 @@ FTV_REAL_TRY(0) {
 	}
 #ifdef DEBUG
 	{ int i; int diff=0; for(i=0; i<retSize; i++) {
-		if(fabs(ret[i] - ret2[i]) > 1e-5) {printf(" >> [encode] ret and ret2 differ at position %d (%g vs %g.\n", i, 
+		double diff = ret[i] - ret2[i]; if(diff < 0) diff = -diff;
+		if(diff > 1e-5) {printf(" >> [encode] ret and ret2 differ at position %d (%g vs %g.\n", i, 
 			ret[i], ret2[i]); diff++;}
 		}
 		if(diff==0) printf(" >> [encode] ret and ret2 agree with each other!!!!\n");
