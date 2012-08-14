@@ -1132,7 +1132,7 @@ float MY_MAT_CHK_RECOVER_POECC(double sum, void* ecMat, gsl_matrix* mat) {
 		while(mat!=TRIO_DOUBLE(mat,mat1,mat2)) mat=TRIO_DOUBLE(mat,mat1,mat2);
 		while(ecMat!=TRIO_DOUBLE(ecMat,ecm1,ecm2)) ecMat=TRIO_DOUBLE(ecMat,ecm1,ecm2); 
 		unsigned int failed_corr = decode(mat->data, mat->size1*mat->size2, (const double*)ecMat);
-		DBG(printf("[Matrix RECOVER_POECC] FAILED corrections = %d out of %d blocks\n", failed_corr, (int)((mat->size1 * mat->size2)/BLK_LEN)));
+		DBG(printf("[Matrix RECOVER_POECC] FAILED corrections = %d out of %d blocks\n", failed_corr, (int)((mat->size1 * mat->size2)/BLK_LEN/BLK_LEN)));
 		ret = (float)failed_corr / (mat->size1 * mat->size2);
 		my_stopwatch_stop(8);
 	} else {
