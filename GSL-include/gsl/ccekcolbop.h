@@ -4,6 +4,7 @@
 #ifndef _CCEKCOLBOP_H
 #define _CCEKCOLBOP_H
 
+#define noinline __attribute__((noinline))
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -26,7 +27,7 @@ extern "C" {
  * when ECC ECC is 1. */
 //#define TAMPER_WITH_ECC_ITSELF
 
-//#define DEBUG
+#define DEBUG
 
 #ifdef DEBUG
 #define DBG(call) {call;}
@@ -48,18 +49,18 @@ extern "C" {
 }
 
 /* Those 2 routines are slightly different from each other..... Could their tolerance also be different ?! */
-void do_encode(const double*, const int, const int, double*, const int);
-void do_encode_2(const double*, const int, const int, double*, const int); /* A slightly different implementation */
-void encode(const double*, const int, void**);
-void decode(double* patient, const int lenPatient, const double* doc);
-void POECC_SUMMARY();
+noinline void do_encode(const double*, const int, const int, double*, const int);
+noinline void do_encode_2(const double*, const int, const int, double*, const int); /* A slightly different implementation */
+noinline void encode(const double*, const int, void**);
+noinline unsigned int decode(double* patient, const int lenPatient, const double* doc);
+noinline void POECC_SUMMARY();
 
 // And we have single precision version
-void do_encode_float(const float*, const int, const int, float*, const int);
-void do_encode_2_float(const float*, const int, const int, float*, const int); /* A slightly different implementation */
-void encode_float(const float*, const int, void**);
-void decode_float(float* patient, const int lenPatient, const float* doc);
-void POECC_FLOAT_SUMMARY();
+noinline void do_encode_float(const float*, const int, const int, float*, const int);
+noinline void do_encode_2_float(const float*, const int, const int, float*, const int); /* A slightly different implementation */
+noinline void encode_float(const float*, const int, void**);
+noinline void decode_float(float* patient, const int lenPatient, const float* doc);
+noinline void POECC_FLOAT_SUMMARY();
 
 #ifdef __cplusplus
 }

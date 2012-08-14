@@ -1,7 +1,7 @@
 # This is module geauxtigers.
 # It contains some utilities for injection.
 
-import os, subprocess, threading
+import os, subprocess, threading, signal
 
 def Source(script, update=1):
 	pipe = subprocess.Popen(". %s; env" % script, stdout=subprocess.PIPE, shell=True)

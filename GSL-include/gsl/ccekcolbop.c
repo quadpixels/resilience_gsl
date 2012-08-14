@@ -1,21 +1,35 @@
 #include "ccekcolbop.h"
+#include "real.h"
+
 #define FT_ROUTINES_VULN
 #ifdef FT_ROUTINES_VULN
-#include "real.h"
+	#ifndef FT3TEST
+		#define FTV_REAL_TRY(label) REAL_TRY(label)
+		#define FTV_REAL_CATCH(label) REAL_CATCH(label)
+		#define FTV_REAL_END(label) REAL_END(label)
+	#else
+		#define FTV_REAL_TRY(label) ;
+		#define FTV_REAL_CATCH(label) ;
+		#define FTV_REAL_END(label) ;
+	#endif
 #else
-#include "spoof_real.h"
+	#define FTV_REAL_TRY(label) ;
+	#define FTV_REAL_CATCH(label) ;
+	#define FTV_REAL_END(label) ;
 #endif
 
-static long poecc_num_encoded = 0;
-static long poecc_num_corrected = 0;
+long poecc_num_encoded = 0;
+long poecc_num_corrected = 0;
 
 /* The doctor is examining the patient. If patient's diseases get discovered, cure them. */
 /* It's possible to speculate the range of the size of the patient from the size of the 
  * doctor and vice versa, the exact sizes still need be fed into the call. */
-void do_decode(double* patient, const int offsetPatient, const int lenPatient, 
+noinline
+unsigned int do_decode(double* patient, const int offsetPatient, const int lenPatient, 
 	const double* doc, const int offsetDoc, const int lenDoc) /* lenDoc in num of elements */
 {
-REAL_TRY(0) {
+unsigned int failed_corr = 0;
+FTV_REAL_TRY(0) {
 	double colSums[BLK_LEN], rowSums[BLK_LEN], tileSum, grandTotal, rowSum=0, colSum=0;
 	unsigned int isColDiff[BLK_LEN], isRowDiff[BLK_LEN]; /* If isColDiff[2] is 1, then column sum 2 is different */
 	int nTiles = (lenDoc - 1) / (2*BLK_LEN + 1), pRSum, pCSum;
@@ -47,7 +61,7 @@ REAL_TRY(0) {
 			int pCSum = j + BLK_LEN + offsetDoc + i*(BLK_LEN*2+1);
 			int pRSum = j + offsetDoc + i*(BLK_LEN*2+1);
 			if(doc[pRSum] != rowSums[j]) {
-#ifdef DEBUG
+#ifdef DEBUG_ECC
 				printf("[decode] tile %d, sum of row %d different: should be %f but is %f\n",
 					i, j, doc[pRSum], rowSums[j]);
 #endif
@@ -55,7 +69,7 @@ REAL_TRY(0) {
 				lastDiffRow = j; nDiffRows++;
 			}
 			if(doc[pCSum] != colSums[j]) {
-#ifdef DEBUG
+#ifdef DEBUG_ECC
 				printf("[decode] tile %d, column %d difference: should be %f but is %f\n",
 					i, j, doc[pCSum], colSums[j]);
 #endif
@@ -64,9 +78,10 @@ REAL_TRY(0) {
 			}
 		}
 		if((nDiffRows > 1) && (nDiffCols > 1)) {
-#ifdef DEBUG
+#ifdef DEBUG_ECC
 			printf("[decode] There are more than 1 row and more than 1 column differences, can't recover..\n");
 #endif
+			failed_corr += 1;
 		} else {
 			if(nDiffRows==1) {
 				for(colId=0, pColStart=pPTStart; colId<BLK_LEN; colId++, pColStart++) {
@@ -77,7 +92,7 @@ REAL_TRY(0) {
 					for(rowId=0, p=pColStart; (rowId<BLK_LEN && p<pPTEnd); rowId++, p+=BLK_LEN)
 						{ if(rowId != lastDiffRow) {sum = sum - patient[p]; }
 					p = pPTStart + lastDiffRow * BLK_LEN + colId;
-#ifdef DEBUG
+#ifdef DEBUG_ECC
 					printf("[debug] Correcting patient[%d] from %f to %f\n",
 					p, patient[p], sum);
 #endif
@@ -92,7 +107,7 @@ REAL_TRY(0) {
 					for(colId=0, p=pRowStart; (colId<BLK_LEN && p<pPTEnd); colId++, p+=1)
 						{ if(colId != lastDiffCol) { sum = sum - patient[p]; } }
 					p = pPTStart + lastDiffCol + rowId * BLK_LEN;
-#ifdef DEBUG
+#ifdef DEBUG_ECC
 					printf("[debug] Correcting patient[%d] from %f to %f\n",
 					p, patient[p], sum);
 #endif
@@ -102,11 +117,14 @@ REAL_TRY(0) {
 			}
 		}
 	}
-	}REAL_CATCH(0) {} REAL_END(0);
+	}FTV_REAL_CATCH(0) {} FTV_REAL_END(0);
+	return failed_corr;
 }
 
-void decode(double* patient, const int lenPatient, const double* doc) {
-REAL_TRY(0) {
+noinline
+unsigned int decode(double* patient, const int lenPatient, const double* doc) {
+unsigned int failed_corr = 0;
+FTV_REAL_TRY(0) {
 	const int nTiles = ((lenPatient-1) / BLKSIZE) + 1;
 	const int eccSize = ((nTiles*BLK_LEN*2) + nTiles + 1);
 	const int nTilesEccEcc = ((eccSize-1) / BLKSIZE) + 1;
@@ -117,13 +135,15 @@ REAL_TRY(0) {
 		do_decode((void*)doc, 0, eccSize, doc, eccSize+eccEccSize*i, eccEccSize);
 	}
 
-	do_decode(patient, 0, lenPatient, doc, 0, eccSize); /* lenDoc in num of elements */
-} REAL_CATCH(0) {} REAL_END(0);
+	failed_corr = do_decode(patient, 0, lenPatient, doc, 0, eccSize); /* lenDoc in num of elements */
+} FTV_REAL_CATCH(0) {} FTV_REAL_END(0);
+	return failed_corr;
 }
 
+noinline
 void encode(const double* array, const int len, void** backup) {
 	poecc_num_encoded += len;
-REAL_TRY(0) {
+FTV_REAL_TRY(0) {
 	/* Profiling */
 	#ifdef TOMMY_H
 	my_stopwatch_checkpoint(8);
@@ -159,7 +179,8 @@ REAL_TRY(0) {
 	}
 #ifdef DEBUG
 	{ int i; int diff=0; for(i=0; i<retSize; i++) {
-		if(ret[i]!=ret2[i]) {printf(" >> [encode] ret and ret2 differ at position %d.\n", i); diff++;}
+		if(fabs(ret[i] - ret2[i]) > 1e-5) {printf(" >> [encode] ret and ret2 differ at position %d (%g vs %g.\n", i, 
+			ret[i], ret2[i]); diff++;}
 		}
 		if(diff==0) printf(" >> [encode] ret and ret2 agree with each other!!!!\n");
 	}
@@ -180,10 +201,11 @@ REAL_TRY(0) {
 	my_stopwatch_stop(8);
 	#endif
 
-} REAL_CATCH(0) {} REAL_END(0);
+} FTV_REAL_CATCH(0) {} FTV_REAL_END(0);
 
 }
 
+noinline
 void do_encode_2(const double* in, const int offsetIn, const int lenIn, double* out, const int offsetOut) {
 	/* 1. Some preparations. */
 	int i, rowId, colId, j, k, pRowStart, pColStart, p; /* Pointer to array */
@@ -232,8 +254,9 @@ void do_encode_2(const double* in, const int offsetIn, const int lenIn, double* 
 }
 
 /* Do encoding of array in[offset:len], store it into out */
+noinline
 void do_encode(const double* in, const int offsetIn, const int lenIn, double* out, const int offsetOut) {
-REAL_TRY(0) {
+FTV_REAL_TRY(0) {
 	/* 1. Some preparations. */
 	int i, rowId, colId, j, k, pRowStart, pColStart, p; /* Pointer to array */
 	int pCSum, pRSum, pTileSum, pGrandTotal; /* Pointer to ECC code */
@@ -275,7 +298,7 @@ REAL_TRY(0) {
 	pGrandTotal = offsetOut + nTiles*(BLK_LEN*2+1);
 	out[pGrandTotal] = grandTotal;
 	DBG(printf(" >> [do_encode] Done.\n"));
-} REAL_CATCH(0) {} REAL_END(0);
+} FTV_REAL_CATCH(0) {} FTV_REAL_END(0);
 }
 
 /* main() is for testing purposes. */
@@ -329,7 +352,6 @@ int main(int argc, char** argv) {
 }
 #endif
 
-__attribute__((noinline))
 void POECC_SUMMARY() {
 	printf("[[ PoECC Ver 2 SUMMARY]]\n");
 	printf(">> Elems encoded: %d\n", poecc_num_encoded);

@@ -12,6 +12,7 @@ long poecc_num_corrected_f = 0;
 /* The doctor is examining the patient. If patient's diseases get discovered, cure them. */
 /* It's possible to speculate the range of the size of the patient from the size of the 
  * doctor and vice versa, the exact sizes still need be fed into the call. */
+noinline
 void do_decode_float(float* patient, const int offsetPatient, const int lenPatient, 
 	const float* doc, const int offsetDoc, const int lenDoc) /* lenDoc in num of elements */
 {
@@ -105,6 +106,7 @@ REAL_TRY(0) {
 	}REAL_CATCH(0) {} REAL_END(0);
 }
 
+noinline
 void decode_float(float* patient, const int lenPatient, const float* doc) {
 REAL_TRY(0) {
 	const int nTiles = ((lenPatient-1) / BLKSIZE) + 1;
@@ -121,6 +123,7 @@ REAL_TRY(0) {
 } REAL_CATCH(0) {} REAL_END(0);
 }
 
+noinline
 void encode_float(const float* array, const int len, void** backup) {
 	poecc_num_encoded_f += len;
 REAL_TRY(0) {
@@ -185,6 +188,7 @@ REAL_TRY(0) {
 
 }
 
+noinline
 void do_encode_2_float(const float* in, const int offsetIn, const int lenIn, float* out, const int offsetOut) {
 	/* 1. Some preparations. */
 	int i, rowId, colId, j, k, pRowStart, pColStart, p; /* Pointer to array */
@@ -233,6 +237,7 @@ void do_encode_2_float(const float* in, const int offsetIn, const int lenIn, flo
 }
 
 /* Do encoding of array in[offset:len], store it into out */
+noinline
 void do_encode_float(const float* in, const int offsetIn, const int lenIn, float* out, const int offsetOut) {
 REAL_TRY(0) {
 	/* 1. Some preparations. */
