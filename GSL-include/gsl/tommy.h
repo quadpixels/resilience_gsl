@@ -183,7 +183,7 @@ double my_sum_matrix(const gsl_matrix*);
 #ifdef DTRSV_EXPERIMENT
 #define FT_TOLERANCE 0.01
 #else
-#define FT_TOLERANCE       0.0000001
+#define FT_TOLERANCE       0.00001
 #endif
 /*
 #define FT_TOLERANCE_LOWER 0.999999999999

@@ -1,7 +1,8 @@
 #include "ccekcolbop.h"
 #include "real.h"
+#include "triplicate.h"
 
-#define FT_ROUTINES_VULN
+//#define FT_ROUTINES_VULN
 #ifdef FT_ROUTINES_VULN
 	#ifndef FT3TEST
 		#define FTV_REAL_TRY(label) REAL_TRY(label)
@@ -125,6 +126,12 @@ noinline
 unsigned int decode(double* patient, const int lenPatient, const double* doc) {
 unsigned int failed_corr = 0;
 FTV_REAL_TRY(0) {
+	/* Perhaps protecting patient and doctor also? */
+	unsigned long p0, p1, p2;
+	unsigned long d0, d1, d2;
+	TRIPLICATE(patient, p0, p1, p2);
+	TRIPLICATE(doc, d0, d1, d2);
+
 	const int nTiles = ((lenPatient-1) / BLKSIZE) + 1;
 	const int eccSize = ((nTiles*BLK_LEN*2) + nTiles + 1);
 	const int nTilesEccEcc = ((eccSize-1) / BLKSIZE) + 1;
@@ -132,16 +139,24 @@ FTV_REAL_TRY(0) {
 
 	/* If we need to correct the ECC itself first.... */
 	int i; for(i=0; i<ECCECC; i++) {
-		do_decode((double*)doc, 0, eccSize, doc, eccSize+eccEccSize*i, eccEccSize);
+		TRI_RECOVER(d0, d1, d2);
+		do_decode((double*)d0, 0, eccSize, (const double*)d0, eccSize+eccEccSize*i, eccEccSize);
 	}
-
-	failed_corr = do_decode(patient, 0, lenPatient, doc, 0, eccSize); /* lenDoc in num of elements */
+	TRI_RECOVER(p0, p1, p2);
+	TRI_RECOVER(d0, d1, d2);
+	failed_corr = do_decode((double*)p0, 0, lenPatient, (const double*)d0, 0, eccSize); /* lenDoc in num of elements */
 } FTV_REAL_CATCH(0) {} FTV_REAL_END(0);
+#ifdef DEBUG
+	if(failed_corr > 0) {
+		print_array(patient, "Input Data", lenPatient);
+		print_array(doc, "Doctor", lenPatient);
+	}
+#endif
 	return failed_corr;
 }
 
 noinline
-void encode(const double* array, const int len, void** backup) {
+unsigned int encode(const double* array, const int len, void** backup) {
 	poecc_num_encoded += len;
 FTV_REAL_TRY(0) {
 	/* Profiling */
@@ -161,7 +176,7 @@ FTV_REAL_TRY(0) {
 	/* 3. Calculate the ECC of the input array and the ECC of the ECC. */
 	do_encode(array, 0, len, ret, 0);
 	if(ECCECC>0) do_encode(ret, 0, eccSize, ret, eccSize); // Hierarchical ECC
-#ifdef DEBUG
+#ifdef DEBUG_REF
 	double* ret2 = (double*)malloc(sizeof(double) * retSize);
 	do_encode_2(array,0,len,ret2, 0);
 	if(ECCECC>0) do_encode_2(ret2,0,eccSize, ret2, eccSize);
@@ -171,13 +186,13 @@ FTV_REAL_TRY(0) {
 		int i, j; for(i=1; i<ECCECC; i++) {
 			for(j=0; j<eccEccSize; j++) {
 			ret[eccSize+eccEccSize*i+j] = ret[eccSize+j];
-#ifdef DEBUG			
+#ifdef DEBUG_REF
 			ret2[eccSize+eccEccSize*i+j]= ret2[eccSize+j];
 #endif
 			}
 		}
 	}
-#ifdef DEBUG
+#ifdef DEBUG_REF
 	{ int i; int diff=0; for(i=0; i<retSize; i++) {
 		double diff = ret[i] - ret2[i]; if(diff < 0) diff = -diff;
 		if(diff > 1e-5) {printf(" >> [encode] ret and ret2 differ at position %d (%g vs %g.\n", i, 
@@ -188,12 +203,12 @@ FTV_REAL_TRY(0) {
 #endif
 
 	/* 4. Return */
-#ifdef DEBUG
 	printf("[encode] input data size=%d, encoded data size=%d \
 	(%d tiles * %d + %d + 1 + %d x %d ECCs of ECC)\n",
 		len, retSize, nTiles, (2*BLK_LEN), nTiles, eccEccSize, ECCECC);
 	print_array(array, "Input Data", len);
 	print_array(ret, "Encoded Data", retSize);
+#ifdef DEBUG_REF
 	print_array(ret2, "Encoded Data 2", retSize);
 #endif
 
@@ -201,9 +216,9 @@ FTV_REAL_TRY(0) {
 	#ifdef TOMMY_H
 	my_stopwatch_stop(8);
 	#endif
+	return retSize;
 
 } FTV_REAL_CATCH(0) {} FTV_REAL_END(0);
-
 }
 
 noinline

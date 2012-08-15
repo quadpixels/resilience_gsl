@@ -53,7 +53,7 @@ extern "C" {
 /* Those 2 routines are slightly different from each other..... Could their tolerance also be different ?! */
 noinline void do_encode(const double*, const int, const int, double*, const int);
 noinline void do_encode_2(const double*, const int, const int, double*, const int); /* A slightly different implementation */
-noinline void encode(const double*, const int, void**);
+noinline unsigned int encode(const double*, const int, void**); // Should return size of alloc'd ary
 noinline unsigned int decode(double* patient, const int lenPatient, const double* doc);
 noinline void POECC_SUMMARY();
 
