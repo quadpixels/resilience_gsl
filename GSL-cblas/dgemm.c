@@ -1,5 +1,7 @@
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_cblas.h>
+#include <gsl/triplicate.h>
+#include <gsl/tommy.h>
 #include "cblas.h"
 #include "../real.h"
 #define forceinline __inline__ __attribute__((always_inline))
