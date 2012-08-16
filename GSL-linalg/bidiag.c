@@ -74,7 +74,6 @@
 #include "../real.h"
 #define forceinline __inline__ __attribute__((always_inline))
 
-forceinline
 int 
 gsl_linalg_bidiag_decomp (gsl_matrix * A, gsl_vector * tau_U, gsl_vector * tau_V)  
 {
@@ -252,7 +251,6 @@ gsl_linalg_bidiag_unpack (const gsl_matrix * A,
     } REAL_CATCH(0) {} REAL_END(0);
 }
 
-forceinline
 int
 gsl_linalg_bidiag_unpack2 (gsl_matrix * A, 
                            gsl_vector * tau_U, 
