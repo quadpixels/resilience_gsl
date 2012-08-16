@@ -6,10 +6,21 @@
 extern "C" {
 #endif
 
-jmp_buf buf;
+jmp_buf buf, buf_1, buf_2;
+
 int _count = 0;
 int _countmax = 20;
 
+noinline
+unsigned int GetJmpBufChecksum(jmp_buf* buf) {
+	unsigned int ret = 0; int i=0;
+	for(i=0; i<sizeof(jmp_buf); i++) {
+		ret += *((char*)(buf) + i);
+	}
+	return ret;
+}
+
+noinline
 void MY_SET_SIGSEGV_HANDLER() {
 	printf(" >> My SIGSEGV Handler Set\n");
 	struct sigaction sa;
@@ -20,6 +31,7 @@ void MY_SET_SIGSEGV_HANDLER() {
 	sigaction(SIGBUS,  &sa, NULL);
 }
 
+noinline
 void MY_REMOVE_SIGSEGV_HANDLER() {
 	printf(" >> Unsetted SIGSEGV handler.\n");
 	struct sigaction sa;
@@ -31,6 +43,7 @@ void MY_REMOVE_SIGSEGV_HANDLER() {
 	printf(" >> Unsetted.\n");
 }
 
+noinline
 void my_action(int sig) {
 	my_stopwatch_checkpoint(5);
 	_count = _count + 1;
@@ -41,18 +54,25 @@ void my_action(int sig) {
 	char** strings;
 	size_t size;
 	size = backtrace(array, 10);
-	
+	/*
 	printf(" >> Stack contents (level=%d):\n", size);
-	// Either use backtrace_symbols_fd or backtrace_symbols
 	backtrace_symbols_fd(array, size, 2);
 #ifdef UNWIND
 	printf(" >> Stack contents by libunwind\n");
 	do_backtrace();
 	printf("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n");
 #endif
+	*/
 	if(_count >= NUM_OF_SIGSEGV) { abort(); }
 	else { 
 		my_stopwatch_stop(5);
+		unsigned long sum1 = GetJmpBufChecksum(&buf), sum2 = GetJmpBufChecksum(&buf_1),
+		sum3 = GetJmpBufChecksum(&buf_2);
+		DBG(printf("Byzantine tolerance of buf. sum: %u, %u, %u.\n", sum1, sum2, sum3));
+		if(sum1 != sum2 && sum2 == sum3) memcpy(&buf, &buf_1, sizeof(jmp_buf));
+		else if(sum2 != sum1 && sum1 == sum3) memcpy(&buf_1, &buf, sizeof(jmp_buf));
+		else if(sum3 != sum2 && sum2 == sum1) memcpy(&buf_2, &buf, sizeof(jmp_buf));
+		DBG(printf("Now, sum(buf) = %u\n", GetJmpBufChecksum(&buf)));
 		siglongjmp(buf, 1); 
 	}
 	printf(" >> Execution not expected here.\n");

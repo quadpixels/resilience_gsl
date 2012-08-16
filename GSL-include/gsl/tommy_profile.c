@@ -49,6 +49,8 @@ struct timeval g_tvTick[SWSZ], g_tvTock[SWSZ];
 struct timeval* g_ptv[SWSZ];
 unsigned long g_time[SWSZ];
 
+#define PROFILE_DISABLED
+#ifndef PROFILE_DISABLED
 noinline
 void my_stopwatch_checkpoint(int id) {
 	STOPWATCH_INCREMENT(id);
@@ -85,6 +87,13 @@ noinline void my_stopwatch_show(int id, char writeToFile) {
 	}
 	return;
 }
+#else
+noinline void my_stopwatch_checkpoint(int id) {}
+noinline void my_stopwatch_stop(int id) {}
+noinline unsigned long my_stopwatch_get(int id) {}
+noinline void my_stopwatch_show(int id, char writeToFile) {}
+#endif
+
 
 #define SW3START my_stopwatch_checkpoint(3)
 #define SW3STOP my_stopwatch_stop(3)
