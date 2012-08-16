@@ -1,5 +1,6 @@
 // 08-12: Re-write some of the FT routines. Hope it will be fault-tolerant.
 #include "tommy.h"
+#include "triplicate.h"
 #include <sys/signal.h>
 #include <signal.h>
 #include "real.h"
@@ -25,58 +26,6 @@
 #define noinline __attribute__((noinline))
 
 int nonEqualCount = 0;
-
-// Use this to stop the compiler from removing sigsetjmp!
-void trick_me_jr(int jmpret) {
-	if(jmpret == 999) printf("Jack is in the box!\n");
-}
-
-unsigned long trick_me_ptr(unsigned long ptr, int delta) {
-	return ptr + delta;
-}
-
-static size_t trick_me_size_t(size_t in, size_t delta) {
-	return in + delta;
-}
-
-static unsigned int GetMatrixChecksum(const gsl_matrix* m) {
-	const char* mm = (const char*)m;
-	unsigned int ret = 0;
-	int i; for(i=0; i<sizeof(gsl_matrix); i++) {
-		ret += *(mm + i);
-	}
-	return ret;
-}
-// The same as above. We can't change the field of a const gsl_matrix.
-#define TRIPLICATE_SIZE_T(in, s0, s1, s2) { \
-	s0 = trick_me_size_t(in, 0); \
-	s1 = trick_me_size_t(in, 123); \
-	s2 = trick_me_size_t(in, 456); \
-}
-
-// This time we must correct the field of the const gsl_matrix.
-#define TRMSG DBG(printf("[TRI_RECOVER_SIZE_T] Corrected 1 size_t"))
-#define TRI_RECOVER_SIZE_T(in, s0, s1, s2) { \
-	if((s0 != s1-123) && (s1-123 == s2-456)) { s0 = s1-123; TRMSG; } \
-	if((s0 != s1-123) && (s0 == s2-456)) { s1 = s0 + 123; TRMSG; } \
-	if((s1-123 != s2-456) && (s0 == s1-123)) { s2 = s0 + 456; TRMSG; } \
-	if(in != s0) in = s0; \
-}
-	
-// in = whatever, r1, r2 are unsigned long's
-// We can't change the const gsl_matrix*, so we need make three copies,
-// and change these copies.
-#define TRIPLICATE(in, r0, r1, r2) \
-	r0 = trick_me_ptr((unsigned long)in, 0); \
-	r1 = trick_me_ptr((unsigned long)in, 123); \
-	r2 = trick_me_ptr((unsigned long)in, 456);
-
-#define TRI_RECOVER(r0, r1, r2) { \
-	if((r0 != r1-123) && (r1-123 == r2-456)) { r0 = r1-123; printf("[TRI_RECOVER] Corrected 1 element\n");} \
-	else if((r0 != r1-123) && (r0 == r2-456)) { r1 = r0+123; printf("[TRI_RECOVER] Corrected 1 element\n");} \
-	else if((r0 != r2-456) && (r0 == r1-123)) { r2 = r0+456; printf("[TRI_RECOVER] Corrected 1 element\n");} \
-}
-
 void check_nan(double x, char* k) { if(/*isnan(x)*/x!=x) { printf("%s is nan\n", k); }}
 
 noinline
@@ -815,11 +764,10 @@ void GSL_BLAS_DGEMM_FT3(CBLAS_TRANSPOSE_t TransA, CBLAS_TRANSPOSE_t TransB,
 	TRIPLICATE_SIZE_T(matA->size1, mas10, mas11, mas12);
 	TRIPLICATE_SIZE_T(matA->size2, mas20, mas21, mas22);
 	
-	/* Protect the contents of matrix A, B and C (no data, of course) */
 	double sumA, sumB, sumC;
 	sumA=my_sum_matrix(matA); sumB=my_sum_matrix(matB); sumC=my_sum_matrix(matC); 
 	/* Protect the pointer to ECC codes. */
-	void* ecMatA, *ecMatB, *ecMatC;
+	void* ecMatA, *ecMatB, *ecMatC, *ecMatC_2;
 	unsigned long ema_0, ema_1, ema_2, emb_0, emb_1, emb_2, emc_0, emc_1, emc_2;
 	
 	nonEqualCount=0;
@@ -834,15 +782,27 @@ void GSL_BLAS_DGEMM_FT3(CBLAS_TRANSPOSE_t TransA, CBLAS_TRANSPOSE_t TransB,
 	TRIPLICATE_SIZE_T(matC_bak->size1, mcs10, mcs11, mcs12);
 	TRIPLICATE_SIZE_T(matC_bak->size2, mcs20, mcs21, mcs22);
 	int jmpret, isEqual;
-	encode((matA->data), (matA->size1*matA->size2), &ecMatA); 
-	TRIPLICATE(ecMatA, ema_0, ema_1, ema_2);
 	encode((matB->data), (matB->size1*matB->size2), &ecMatB);
 	TRIPLICATE(ecMatB, emb_0, emb_1, emb_2);
-	encode((matC->data), (matC->size1*matC->size2), &ecMatC);
+	int emc_size = encode((matC_bak->data), (matC->size1*matC->size2), &ecMatC);
+	ecMatC_2 = malloc(sizeof(double) * emc_size);
+	memcpy(ecMatC_2, ecMatC, sizeof(double) * emc_size);
 	TRIPLICATE(ecMatC, emc_0, emc_1, emc_2);
+	encode((matA->data), (matA->size1*matA->size2), &ecMatA); 
+	TRIPLICATE(ecMatA, ema_0, ema_1, ema_2);
+	DBG(printf("[DGEMM_FT3] ECC Code Addr: A=%lx, B=%lx, C=%lx\n", (unsigned long)ecMatA, (unsigned long)ecMatB, (unsigned long)ecMatC));
 	SUPERSETJMP("After encoding");
 	if(jmpret != 0) {
 		kk:
+		/* Chasing the wind, only */
+		int i;
+		int n_diff = 0;
+		for(i=0; i<emc_size; i++) {
+			double d1 = *((double*)ecMatC + i);
+			double d2 = *((double*)ecMatC_2 + i);
+			if(d1 != d2) { if(n_diff++ < 10) printf("ecMatC[%d] != ecMatC_2[%d] (%g vs %g)\n", i, i, d1, d2); }
+		}
+		printf("ecMatC and ecMatC_2 have %d elements different.\n", n_diff);
 		DBG(printf("[DGEMM_FT3]Recovering input...\n"));
 		{
 			/* Recover ptr to matA and matA's ecc */
@@ -880,11 +840,22 @@ void GSL_BLAS_DGEMM_FT3(CBLAS_TRANSPOSE_t TransA, CBLAS_TRANSPOSE_t TransB,
 			TRI_RECOVER_SIZE_T(matC_bak->tda, mcb0, mcb1, mcb2);
 			TRI_RECOVER(emc_0, emc_1, emc_2);
 			if((long)ecMatC != emc_0) ecMatC = (void*)emc_0;
-			MY_MAT_CHK_RECOVER_POECC(sumC, ecMatC, (gsl_matrix*)matC_0);
+			int n_retry = 0;
+chk_rec_c:
+			float fr = MY_MAT_CHK_RECOVER_POECC(sumC, ecMatC, (gsl_matrix*)matC_0);
+			if(fr > 0.5 && n_retry < 5) {
+				DBG(printf("[DGEMM_FT3] Oh! Is ecMatC damaged? (%d/%d)\n", n_retry, 5));
+				memcpy(ecMatC, ecMatC_2, sizeof(double) * emc_size);
+				n_retry++;
+				goto chk_rec_c;
+			}
 
 			//And there we have completed recovering it....
 			DBG(printf("[DGEMM_FT3]Copying back input...\n"));
-			gsl_matrix_memcpy(matC, matC_bak);
+			int ec;
+			if((ec = gsl_matrix_memcpy(matC, matC_bak)) != GSL_SUCCESS) {
+				printf("[DGEMM_FT3] ! memcpy returned %d\n", ec);
+			}
 		}
 
 	}
@@ -1119,21 +1090,29 @@ void GSL_LINALG_CHOLESKY_DECOMP_FT3(gsl_matrix* A)
 // Returns how much could not be recovered (0 to 1)
 noinline
 float MY_MAT_CHK_RECOVER_POECC(double sum, void* ecMat, gsl_matrix* mat) {
+	MY_SET_SIGSEGV_HANDLER();
+	// Protect mat and ecMat
+	unsigned long mat0, mat1, mat2;
+	unsigned long em0, em1, em2;
+	TRIPLICATE(mat, mat0, mat1, mat2);
+	TRIPLICATE(ecMat, em0, em1, em2);
+	
 	float ret = 0;
 	my_stopwatch_checkpoint(9);
-	double* ecm1, *ecm2; ecm1=(double*)ecMat; ecm2=(double*)ecMat;
 	double c = my_sum_matrix(mat);
+	DBG(printf("[Matrix RECOVER_POECC] Sum=%g vs %g\n", sum, c));
 	if(c!=sum) {
-		gsl_matrix *mat1, *mat2; mat1=(gsl_matrix*)mat; mat2=(gsl_matrix*)mat;
 		my_stopwatch_checkpoint(8);
-		MY_SET_SIGSEGV_HANDLER();
 		int jmpret=0;
 		SUPERSETJMP("MAT_CHK_RECOVER_POECC");
-		while(mat!=TRIO_DOUBLE(mat,mat1,mat2)) mat=TRIO_DOUBLE(mat,mat1,mat2);
-		while(ecMat!=TRIO_DOUBLE(ecMat,ecm1,ecm2)) ecMat=TRIO_DOUBLE(ecMat,ecm1,ecm2); 
-		unsigned int failed_corr = decode(mat->data, mat->size1*mat->size2, (const double*)ecMat);
-		DBG(printf("[Matrix RECOVER_POECC] FAILED corrections = %d out of %d blocks\n", failed_corr, (int)((mat->size1 * mat->size2)/BLK_LEN)));
-		ret = (float)failed_corr / (mat->size1 * mat->size2);
+		/* Recover mat and ecMat */
+		TRI_RECOVER(mat0, mat1, mat2);
+		if((unsigned long)mat != mat0) mat = (gsl_matrix*)mat0;
+		TRI_RECOVER(em0, em1, em2);
+		unsigned int failed_corr = decode(mat->data, mat->size1*mat->size2, (const double*)em0);
+		int n_blks = (int)((mat->size1 * mat->size2)/BLK_LEN/BLK_LEN+1);
+		DBG(printf("[Matrix RECOVER_POECC] FAILED corrections = %d out of %d blocks\n", failed_corr, n_blks));
+		ret = (float)failed_corr / n_blks;
 		my_stopwatch_stop(8);
 	} else {
 		DBG(printf("[Matrix RECOVER_POECC] Sums equal for ecMat=%lx, mat=%lx\n", (long)ecMat, (long)mat));

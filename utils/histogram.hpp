@@ -1,3 +1,4 @@
+// 2012-08-14: Fixed an evil little cute BUG!
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
@@ -82,6 +83,14 @@ public:
 		AddEntry((coal-gold) / gold);
 	}
 
+	void AddEntryProportion(double gold, double coal) {
+	if(isnan(gold) || isnan(coal)) { AddEntry(NAN); return; }
+		if(isinf(gold) || isinf(coal)) { AddEntry(INFINITY); return; }
+		if(gold == 0 && coal == 0) { AddEntry(1); return; }
+		if(gold == 0 && coal != 0) { AddEntry(INFINITY); return; }
+		AddEntry(coal / gold);
+	}
+
 	void AddEntry(double x) {
 		const int n = num_brk_zeroone + num_brk_onetwo + num_brk_beyondtwo + 1;
 		if(isnan(x)) { counts[n+3]++; return; }
@@ -119,5 +128,10 @@ public:
 			return;
 		}
 		assert(0);
+	}
+
+	int GetNumberOfElements() {
+		int ret = 0, i; for(i=0; i<num_breaks; i++) ret += counts[i];
+		return ret;
 	}
 };
