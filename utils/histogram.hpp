@@ -74,15 +74,7 @@ public:
 		printf("\n");
 	}
 
-	void AddEntryProportion(double gold, double coal) {
-		if(isnan(gold) || isnan(coal)) { AddEntry(NAN); return; }
-		if(isinf(gold) || isinf(coal)) { AddEntry(INFINITY); return; }
-		if(gold == 0 && coal == 0) { AddEntry(1); return; }
-		if(gold == 0 && coal != 0) { AddEntry(INFINITY); return; }
-		AddEntry(coal / gold);
-	}
-
-	void AddEntryDiff(double gold, double coal) {
+	void AddEntry(double gold, double coal) {
 		if(isnan(gold) || isnan(coal)) { AddEntry(NAN); return; }
 		if(isinf(gold) || isinf(coal)) { AddEntry(INFINITY); return; }
 		if(gold == 0 && coal == 0) { AddEntry(1); return; }
@@ -97,14 +89,9 @@ public:
 		else if(x == 0) { counts[n+1]++; return; }
 		else if(x > 0) {
 			int search_begin = (x>1) ? num_breaks - num_brk_beyondtwo - num_brk_onetwo - 1
-			                         : num_breaks - num_brk_beyondtwo - num_brk_onetwo - 1 - num_brk_zeroone - 1;
-			if(x>0 && x<=0.25) {
-				breaks[num_breaks - num_brk_beyondtwo - num_brk_onetwo - 1 - num_brk_zeroone] ++;
-				return;
-			}
-			int flag = 0, old_flag = -999, p;
-			for(p = search_begin; p < num_breaks; p++) {
-				flag = ((x > breaks[p]) ? 1 : 0);
+			                         : num_breaks - num_brk_beyondtwo - num_brk_onetwo - 1 - num_brk_zeroone;
+			int flag = 1, old_flag = 1, p;
+			for(p = search_begin; p < num_breaks; p++, flag = ((x > breaks[p] || isnan(breaks[p])) ? 1 : 0)) {
 				if(flag == 0 && old_flag == 1) {
 					counts[p-1]++;
 //					printf("%g belongs to bucket %.13e - %.13e\n.", x, breaks[p-1], breaks[p]);
@@ -117,9 +104,9 @@ public:
 			return;
 		} else if(x < 0) {
 			int search_begin = (x<-1) ? 0 : num_brk_beyondtwo;
-			int flag = 0, old_flag = -999, p;
-			for(p = search_begin; p < n; p++) {
-				flag = ((x > breaks[p]) ? 1 : 0);
+			int flag, old_flag = -999, p;
+			flag = (x > breaks[search_begin]) ? 1: 0;
+			for(p = search_begin; p < n; p++, flag = ((x > breaks[p]) ? 1 : 0)) {
 				if(flag == 0 && old_flag == 1) {
 					counts[p-1]++;
 //					printf("%g belongs to bucket %.13e - %.13e\n.", x, breaks[p-1], breaks[p]);
