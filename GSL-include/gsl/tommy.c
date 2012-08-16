@@ -5,7 +5,7 @@
 #include <signal.h>
 #include "real.h"
 
-//#define FT_ROUTINES_VULN
+#define FT_ROUTINES_VULN
 #ifdef FT_ROUTINES_VULN
 	#ifndef FT3TEST
 	#define FTV_REAL_TRY(label) REAL_TRY(label)

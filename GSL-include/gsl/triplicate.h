@@ -39,3 +39,4 @@ noinline unsigned int GetMatrixChecksum(const gsl_matrix*);
 	else if((r0 != r2-456) && (r0 == r1-123)) { r2 = r0+456; printf("[TRI_RECOVER] Corrected 1 element\n");} \
 }
 
+#endif
