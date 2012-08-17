@@ -45,12 +45,19 @@ class KillerThread(threading.Thread):
 				print "OSError"
 				pass
 
+def writeHistogram(array, filename):
+	fh = open(filename, 'w')
+	for a in array:
+		fh.write(str(a) + "\n")
+	fh.close()
+
 # Definition of some regexes
 re_poecc_encd = r">> Elems encoded: (?P<elems_encd>[0-9]+).*";
 re_poecc_corrd = r">> Elems corrected: (?P<elems_corrd>[0-9]+).*";
 re_myint_1 = "\[MyInt](.*\t)+.*";
 re_myptr_1 = "\[MyPtr](.*\t)+.*";
 re_dump = ">>.*";
+re_entered_handler = r" >> Caught SIGSEGV signal \((?P<sigsegv_num>[0-9]+) out of [0-9]+ allowed\)"
 re_poke_instcnt = "__POKE__ InstCount: (?P<instcnt>[0-9]+).*";
 re_sig_summary = "\[MySigsegvHandler\].*"                        
 re_fir = r">> FastLowPassFir correct \((?P<fir_correct>[0-9]+)/(?P<fir_incorrect>[0-9]+)/(?P<fir_total>[0-9]+)/(?P<fir_recalc>[0-9]+)\).*";

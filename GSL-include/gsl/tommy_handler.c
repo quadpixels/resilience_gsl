@@ -68,7 +68,7 @@ void my_action(int sig) {
 		my_stopwatch_stop(5);
 		unsigned long sum1 = GetJmpBufChecksum(&buf), sum2 = GetJmpBufChecksum(&buf_1),
 		sum3 = GetJmpBufChecksum(&buf_2);
-		DBG(printf("Byzantine tolerance of buf. sum: %u, %u, %u.\n", sum1, sum2, sum3));
+		DBG(printf("Byzantine tolerance of buf. sum: %lu, %lu, %lu.\n", sum1, sum2, sum3));
 		if(sum1 != sum2 && sum2 == sum3) memcpy(&buf, &buf_1, sizeof(jmp_buf));
 		else if(sum2 != sum1 && sum1 == sum3) memcpy(&buf_1, &buf, sizeof(jmp_buf));
 		else if(sum3 != sum2 && sum2 == sum1) memcpy(&buf_2, &buf, sizeof(jmp_buf));
@@ -97,7 +97,7 @@ void do_backtrace() {
 
 		fname[0]='\0';
 		(void) unw_get_proc_name(&cursor, fname, sizeof(fname), &offset);
-		printf("%p : (%s+0x%x) [%p]\n", pc, fname, offset, pc);
+		printf("%p : (%s+0x%x) [%p]\n", (void*)pc, fname, (unsigned int)offset, (void*)pc);
 	}
 	while(unw_step(&cursor) > 0);
 }

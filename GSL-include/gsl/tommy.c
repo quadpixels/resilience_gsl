@@ -31,6 +31,7 @@ void check_nan(double x, char* k) { if(/*isnan(x)*/x!=x) { printf("%s is nan\n",
 noinline
 double my_sum_vector_actual(const gsl_vector* v) {
 	double ret = 0;
+	DBG(printf("[my_sum_vector] v=%lx, size=%ld, stride=%ld\n", (unsigned long)v, v->size, v->stride));
 	FTV_REAL_TRY(0) {
 		int i; for(i=0; i<v->size; i++) {
 			ret = ret + gsl_vector_get(v, i);
@@ -44,12 +45,17 @@ double my_sum_vector(const gsl_vector* v) {
 	MY_SET_SIGSEGV_HANDLER();
 	int jmpret;
 	SUPERSETJMP("my_sum_vector");
-	return my_sum_vector_actual(v);
+	if(jmpret == 0) {
+		return my_sum_vector_actual(v);
+	} else {
+		DBG(printf("Some errors -- giving up computing my_sum_vector\n"));
+		return -999;
+	}
 }
 
 noinline
 double my_sum_matrix_actual(const gsl_matrix* m) {
-	printf("[my_sum_matrix_actual] m=%lx(%dx%d), m->tda=%d, m->data=%x\n", (long)m, m->size1, m->size2, m->tda, m->data);
+	printf("[my_sum_matrix_actual] m=%lx(%ldx%ld), m->tda=%ld, m->data=%x\n", (long)m, m->size1, m->size2, m->tda, (void*)(m->data));
 	double ret = 0;
 	FTV_REAL_TRY(0) {
 		int i,j; for(i=0; i<m->size1; i++) {
@@ -68,7 +74,7 @@ double my_sum_matrix(const gsl_matrix* m) {
 	MY_SET_SIGSEGV_HANDLER();
 	int jmpret;
 	SUPERSETJMP("my_sum_matrix");
-	printf("[my_sum_matrix] m=%lx, m->tda=%d, m->data=%x\n", (long)m, m->tda, m->data);
+	printf("[my_sum_matrix] m=%lx, m->tda=%ld, m->data=%lx\n", (long)m, m->tda, (void*)(m->data));
 	return my_sum_matrix_actual(m);
 }
 
@@ -312,7 +318,7 @@ double Get_GSL_Matrix_RMSD(const gsl_matrix* A, const gsl_matrix* B) {
 	int s1, s2;
 	s1 = A->size1; s2 = A->size2; // Pretend A and B are of same size
 	if(!((A->size1 == B->size1) && (A->size2 == B->size2))) {
-		printf("[Get_GSL_Matrix_RMSD] A's size (%dx%d) != B's size(%dx%d).\n",
+		printf("[Get_GSL_Matrix_RMSD] A's size (%ldx%ld) != B's size(%ldx%ld).\n",
 		A->size1, A->size2, B->size1, B->size2);
 		s1 = (A->size1 > B->size1 ? B->size1 : A->size1);
 		s2 = (A->size2 > B->size2 ? B->size2 : A->size2);
@@ -328,7 +334,28 @@ double Get_GSL_Matrix_RMSD(const gsl_matrix* A, const gsl_matrix* B) {
 			rsd += (a_elem * a_elem);
 		}
 	}
-	rsd *= (1.0 / A->size1 / A->size2);
+	rsd *= (1.0 / s1 / s2);
+	return rsd;
+}
+
+double Get_GSL_Vector_RMSD(const gsl_vector* X, const gsl_vector* Y) {
+	int s;
+	s = X->size;
+	if(X->size != Y->size) {
+		printf("[Get_GSL_Vector_RMSD] X's size (%ld) != Y's size (%ld).\n",
+			X->size, Y->size);
+		s = (X->size > Y->size) ? Y->size : X->size;
+		printf("                      Assume size is %d.\n", s);
+	}
+	double rsd = 0;
+	int i;
+	for(i=0; i<s; i++) {	
+		double x_elem = gsl_vector_get(X, i);
+		double y_elem = gsl_vector_get(Y, i);
+		x_elem -= y_elem;
+		rsd += x_elem * x_elem;
+	}
+	rsd *= (1.0 / s);
 	return rsd;
 }
 
@@ -356,7 +383,7 @@ FTV_REAL_TRY(0) {
 	C2r = gsl_vector_alloc(A_rc);
 	Br = gsl_vector_alloc(B_rc);
 	ABr = gsl_vector_alloc(A_rc);
-	printf("sizeof r, C2r, Br, ABr: %d %d %d %d\n", r->size, C2r->size, Br->size, ABr->size);
+	printf("sizeof r, C2r, Br, ABr: %ld %ld %ld %ld\n", r->size, C2r->size, Br->size, ABr->size);
 	int i;
 	for(i=0; i<r->size; i++) gsl_vector_set(r, i, (float)rand()/(float)RAND_MAX + 5.0f);
 	my_dgemv(TransB, alpha, B, r, 0, Br);  // Br <- B * r
@@ -484,6 +511,7 @@ FTV_REAL_TRY(0) {
 /* Check if Y2 = A * X */
 noinline 
 int Is_GSL_DGEMV_Equal_actual(CBLAS_TRANSPOSE_t Trans, double alpha, const gsl_matrix* A, const gsl_vector* X, double beta, const gsl_vector* Y, const gsl_vector* Y2) {
+	/* Y2 is the output alphaAX+betaY */
 	my_stopwatch_checkpoint(4);
 	printf(" >> \n");
 	if(X==NULL) printf("X is null\n");
@@ -493,28 +521,35 @@ int Is_GSL_DGEMV_Equal_actual(CBLAS_TRANSPOSE_t Trans, double alpha, const gsl_m
 		return 0; 
 	}
 	int i, j, result;
-	double sum1=0, sum2=0;
+	double sum1_1=0, sum1=0, sum2=0;
+	double abserr, relerr;
 FTV_REAL_TRY(0) {
 	if(beta!=0) {
-		for(i=0; i<Y->size; i++) sum1 = sum1 - gsl_vector_get(Y, i);
+		for(i=0; i<Y->size; i++) sum1 = sum1 + gsl_vector_get(Y, i);
 		sum1 = sum1 * beta;
 	}
 	for(i=0; i<X->size; i++) {
-		double currRS = 0; /* current Row Sum */
+		double currCS = 0; /* current column Sum */
 		int jj = (Trans==CblasNoTrans) ? A->size1 : A->size2;
 		for(j=0; j<jj; j++) {
-			if(Trans==CblasNoTrans) currRS = currRS + gsl_matrix_get(A, j, i);
-			else currRS = currRS + gsl_matrix_get(A, i, j);
+			if(Trans==CblasNoTrans) currCS = currCS + gsl_matrix_get(A, j, i);
+			else currCS = currCS + gsl_matrix_get(A, i, j);
 		}
-		sum1 = sum1 + currRS * gsl_vector_get(X, i);
+		sum1_1 = sum1_1 + currCS * gsl_vector_get(X, i);
 	}
+	sum1_1 *= alpha;
+	sum1 += sum1_1;
 	for(i=0; i<Y->size; i++) { sum2 = sum2 + gsl_vector_get(Y2, i); }
-	sum1 = sum1 - sum2;
-	sum1 = sum1 / sum2; if(sum1 < 0) sum1 = -sum1;
-	if(sum1 < FT_TOLERANCE /** X->size*/) result = 1; /* Precision problem!!! */
-	else result = 0;
+	abserr = sum1 - sum2; if(abserr < 0) abserr = -abserr;
+	relerr = abserr / sum2; if(relerr < 0) relerr = -relerr;
+	const double tol = FT_TOLERANCE / 100;
+	printf("[Is_GSL_DGEMV_Equal] DGEMV Equal, abs.err=%g, rel.err=%g (tol=%g)\n", abserr, relerr, tol);
+	if(abserr > tol && relerr > tol) {
+		result = 0; /* Precision problem!!! */
+	}
+	else result = 1;
 	my_stopwatch_stop(4);
-	if(result==0) printf("## DGEMV not equal\n");
+	if(result==0) printf("[Is_GSL_DGEMV_Equal] DGEMV not equal\n");
 } FTV_REAL_CATCH(0) {} FTV_REAL_END(0);
 	return result;
 }
@@ -744,7 +779,7 @@ void GSL_BLAS_DGEMM_FT3(CBLAS_TRANSPOSE_t TransA, CBLAS_TRANSPOSE_t TransB,
 			double beta, gsl_matrix* matC)
 
 {
-	/* Protect the pointers to matrix A, B, C */
+	/* Protect the pointers to matrix A, B, (the original) C */
 	unsigned long matA_0, matA_1, matA_2, 
 	     matB_0, matB_1, matB_2,
 	     matC_0, matC_1, matC_2;
@@ -795,14 +830,6 @@ void GSL_BLAS_DGEMM_FT3(CBLAS_TRANSPOSE_t TransA, CBLAS_TRANSPOSE_t TransB,
 	if(jmpret != 0) {
 		kk:
 		/* Chasing the wind, only */
-		int i;
-		int n_diff = 0;
-		for(i=0; i<emc_size; i++) {
-			double d1 = *((double*)ecMatC + i);
-			double d2 = *((double*)ecMatC_2 + i);
-			if(d1 != d2) { if(n_diff++ < 10) printf("ecMatC[%d] != ecMatC_2[%d] (%g vs %g)\n", i, i, d1, d2); }
-		}
-		printf("ecMatC and ecMatC_2 have %d elements different.\n", n_diff);
 		DBG(printf("[DGEMM_FT3]Recovering input...\n"));
 		{
 			/* Recover ptr to matA and matA's ecc */
@@ -910,30 +937,82 @@ void GSL_BLAS_DGEMV_FT3(CBLAS_TRANSPOSE_t Trans, double alpha,
 			const gsl_matrix* matA, const gsl_vector* vecX, 
 			double beta, gsl_vector* vecY)
 {
+	/* Protect pointers to matrix A, vectors X and (the original) Y */
+	unsigned long matA0, matA1, matA2,
+	              vecX0, vecX1, vecX2,
+		      vecY0, vecY1, vecY2;
+	TRIPLICATE(matA, matA0, matA1, matA2);
+	TRIPLICATE(vecX, vecX0, vecX1, vecX2);
+
+	/* Protect size_t of A, X and Y */
+	size_t mas10, mas11, mas12;
+	size_t mas20, mas21, mas22;
+	size_t vxs0, vxs1, vxs2;
+	size_t vys0, vys1, vys2;
+	TRIPLICATE_SIZE_T(matA->size1, mas10, mas11, mas12);
+	TRIPLICATE_SIZE_T(matA->size2, mas20, mas21, mas22);
+	TRIPLICATE_SIZE_T(vecX->size,  vxs0,  vxs1,  vxs2);
+	TRIPLICATE_SIZE_T(vecY->size,  vys0,  vys1,  vys2);
+
+
 	MY_SET_SIGSEGV_HANDLER();
 	double sumA, sumX, sumY; 
 	sumA=my_sum_matrix(matA); sumX=my_sum_vector(vecX); sumY=my_sum_vector(vecY); 
+
+	/* Protect ptrs to ECC codes. */
 	void* ecMatA, *ecVecX, *ecVecY;
+	unsigned long ema0, ema1, ema2, evx0, evx1, evx2, evy0, evy1, evy2;
+
 	DBG(printf("[DGEMV_FT3] 2. Encoding input\n"));
 	encode((matA->data), (matA->size1*matA->size2), &ecMatA); 
+	TRIPLICATE(ecMatA, ema0, ema1, ema2);
 	encode((vecX->data), (vecX->size), &ecVecX); 
+	TRIPLICATE(ecVecX, evx0, evx1, evx2);
 	encode((vecY->data), (vecY->size), &ecVecY); 
+	TRIPLICATE(ecVecY, evy0, evy1, evy2);
+	
+	gsl_vector* vecY_bak = gsl_vector_alloc(vecY->size);
+	gsl_vector_memcpy(vecY_bak, vecY);
+	TRIPLICATE(vecY_bak, vecY0, vecY1, vecY2);
+
 	nonEqualCount=0;
 	int jmpret, isEqual;
 	DBG(printf("[DGEMV_FT3] 3. Setjmp\n"));
-	jmpret = sigsetjmp(buf, 1);
+	SUPERSETJMP("[DGEMV_FT3] After encoding\n");
 	if(jmpret != 0) {
 		kk: 
+		DBG(printf("[DGEMV_FT3]Recovering input...\n"));
 		{
-		MY_MAT_CHK_RECOVER_POECC(sumA, ecMatA, (gsl_matrix*)matA);
-		MY_VEC_CHK_RECOVER_POECC(sumX, ecVecX, (gsl_vector*)vecX);
-		MY_VEC_CHK_RECOVER_POECC(sumY, ecVecY, (gsl_vector*)vecY);
+		/* Recover ptr to A's ECC */
+		size_t *mas1 = &(((gsl_matrix*)matA)->size1);
+		size_t *mas2 = &(((gsl_matrix*)matA)->size2);
+		TRI_RECOVER_SIZE_T((*mas1), mas10, mas11, mas12);
+		TRI_RECOVER_SIZE_T((*mas2), mas20, mas21, mas22);
+		TRI_RECOVER(matA0, matA1, matA2);
+		TRI_RECOVER(ema0, ema1, ema2);
+		MY_MAT_CHK_RECOVER_POECC(sumA, (void*)ema0, (gsl_matrix*)matA0);
+
+		TRI_RECOVER(vecX0, vecX1, vecX2);
+		size_t *vxs = &(((gsl_vector*)vecX)->size);
+		TRI_RECOVER_SIZE_T((*vxs), vxs0, vxs1, vxs2);
+		TRI_RECOVER(evx0, evx1, evx2);
+		MY_VEC_CHK_RECOVER_POECC(sumX, (void*)evx0, (gsl_vector*)vecX0);
+
+		TRI_RECOVER(vecY0, vecY1, vecY2);
+		size_t *vys = &(((gsl_vector*)vecY_bak)->size);
+		TRI_RECOVER_SIZE_T((*vys), vys0, vys1, vys2);
+		TRI_RECOVER(evy0, evy1, evy2);
+		MY_VEC_CHK_RECOVER_POECC(sumY, (void*)evy0, (gsl_vector*)vecY0);
+
+		gsl_vector_memcpy(vecY, vecY_bak);
 		} 
 	}
-	gsl_vector* vecY_bak = gsl_vector_alloc(vecY->size);
-	gsl_vector_memcpy(vecY_bak, vecY);
 	DBG(printf("[DGEMV_FT3]Normal call to dgemv.. nonEqualCount=%d\n", nonEqualCount));
 	SW3START; 
+	SUPERSETJMP("Just before DGEMV");
+	if(jmpret != 0) {
+		goto kk;
+	}
 	gsl_blas_dgemv(Trans, alpha, matA, vecX, beta, vecY);
 	SW3STOP; 
 	my_stopwatch_checkpoint(11); 
@@ -951,8 +1030,13 @@ void GSL_BLAS_DGEMV_FT3(CBLAS_TRANSPOSE_t Trans, double alpha,
 	}
 	my_stopwatch_stop(6); 
 	DBG(printf("[DGEMV_FT3]Releasing memory for vec_bak's\n"));
-	gsl_vector_free(vecY_bak);
-	DBG(printf("Released.\n"));
+	SUPERSETJMP("Just before free");
+	if(jmpret == 0) {
+		gsl_vector_free(vecY_bak);
+		DBG(printf("Released.\n"));
+	} else {
+		printf("Oops. Something wrong trying to free the memory. Giving up freeing.");
+	}
 	MY_REMOVE_SIGSEGV_HANDLER();
 }
 
