@@ -829,6 +829,7 @@ void GSL_BLAS_DGEMM_FT3(CBLAS_TRANSPOSE_t TransA, CBLAS_TRANSPOSE_t TransB,
 	SUPERSETJMP("After encoding");
 	if(jmpret != 0) {
 		kk:
+		;
 		/* Chasing the wind, only */
 		DBG(printf("[DGEMM_FT3]Recovering input...\n"));
 		{
@@ -868,7 +869,8 @@ void GSL_BLAS_DGEMM_FT3(CBLAS_TRANSPOSE_t TransA, CBLAS_TRANSPOSE_t TransB,
 			TRI_RECOVER(emc_0, emc_1, emc_2);
 			if((long)ecMatC != emc_0) ecMatC = (void*)emc_0;
 			int n_retry = 0;
-chk_rec_c:
+			chk_rec_c:
+			;
 			float fr = MY_MAT_CHK_RECOVER_POECC(sumC, ecMatC, (gsl_matrix*)matC_0);
 			if(fr > 0.5 && n_retry < 5) {
 				DBG(printf("[DGEMM_FT3] Oh! Is ecMatC damaged? (%d/%d)\n", n_retry, 5));
@@ -980,7 +982,8 @@ void GSL_BLAS_DGEMV_FT3(CBLAS_TRANSPOSE_t Trans, double alpha,
 	DBG(printf("[DGEMV_FT3] 3. Setjmp\n"));
 	SUPERSETJMP("[DGEMV_FT3] After encoding\n");
 	if(jmpret != 0) {
-		kk: 
+		kk:
+		;
 		DBG(printf("[DGEMV_FT3]Recovering input...\n"));
 		{
 		/* Recover ptr to A's ECC */

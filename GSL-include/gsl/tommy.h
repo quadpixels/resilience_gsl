@@ -84,7 +84,7 @@ extern "C" {
 noinline void my_stopwatch_checkpoint(int id);
 noinline void my_stopwatch_stop(int id);
 noinline unsigned long my_stopwatch_get(int id);
-noinline void my_stopwatch_show(int id, char writeToFile);
+noinline void my_stopwatch_show(int id, char* extra_msg, char writeToFile);
 void STOPWATCH_INCREMENT(int id);
 
 int Is_GSL_Vector_Equal(const gsl_vector* A, const gsl_vector* B);
