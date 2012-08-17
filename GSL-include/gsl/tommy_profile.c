@@ -76,9 +76,9 @@ noinline unsigned long my_stopwatch_get(int id) {
 	return g_time[id];
 }
 
-noinline void my_stopwatch_show(int id, char writeToFile) {
+noinline void my_stopwatch_show(int id, char* extra_msg, char writeToFile) {
 	char k[100];
-	sprintf(k, "[my_stopwatch_show #%d] %lu microseconds (%s).\n", id, my_stopwatch_get(id), _swMessage[id]);
+	sprintf(k, "[my_stopwatch_show #%d] %lu microseconds (%s|%s).\n", id, my_stopwatch_get(id), _swMessage[id], extra_msg);
 	printf("%s", k);
 	if(writeToFile==1) {
 		FILE* f = fopen("My_Stopwatch_Log", "a");
@@ -91,7 +91,7 @@ noinline void my_stopwatch_show(int id, char writeToFile) {
 noinline void my_stopwatch_checkpoint(int id) {}
 noinline void my_stopwatch_stop(int id) {}
 noinline unsigned long my_stopwatch_get(int id) {}
-noinline void my_stopwatch_show(int id, char writeToFile) {}
+noinline void my_stopwatch_show(int id, char* extra_msg, char writeToFile) {}
 #endif
 
 
