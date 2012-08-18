@@ -1,6 +1,12 @@
+// For branch "master"
+
 #pragma once
 #ifndef TOMMY_H
 #define TOMMY_H
+
+// 2012-08-18: Added a branch "master". May merge some time.
+#define GO_HOME_IN_A_TANK
+
 #define forceinline __inline__ __attribute__((always_inline))
 #define noinline __attribute__((noinline))
 #include <execinfo.h>
