@@ -1,0 +1,24 @@
+#!/bin/bash
+
+if [ $# -ne 1 ]; then
+	echo "Script for quickly building GSL-powered programs!"
+	echo "Usage: TEST Filename"
+	echo "You don't need to add \".c\". The script adds it for you."
+	echo "Make sure you have installed GSL!"
+	exit
+fi
+
+if [[ `hostname` =~ .*XPS-M1330.* ]]; then
+	echo "Running on laptop."
+	INCS="-L /home/nitroglycerine/Downloads/gsl-1.14-installed/lib/ -I /home/nitroglycerine/Downloads/gsl-1.14/"
+	STATIC_LIBS="/usr/local/lib/libgsl.a /usr/local/lib/libgslcblas.a"
+	LIB_AND_FLAGS=" -pg -lgsl -lgslcblas -static -lm"
+else
+	echo "Running on QB4."
+fi
+	filename=$1
+	# Static link
+	g++ -c $filename".c" -o $filename".o" -I $INCS
+	g++ -g -pg $filename".o" $STATIC_LIBS -lm -o $filename".out"
+	gcc -g $filename".o" $LIB_AND_FLAGS -o $filename".out"
+	rm $filename".o"
