@@ -27,8 +27,6 @@ extern "C" {
  * when ECC ECC is 1. */
 //#define TAMPER_WITH_ECC_ITSELF
 
-#define DEBUG
-
 #ifndef DBG
 #ifdef DEBUG
 #define DBG(call) {call;}

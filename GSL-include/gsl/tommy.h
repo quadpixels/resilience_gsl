@@ -197,9 +197,10 @@ double my_sum_matrix(const gsl_matrix*);
 #define FT_TOLERANCE_UPPER 1.000000000001
 */
 
-#define NUM_OF_RERUN 10	// Up to how many re-runs ? If the number is exceeded the program would return the last result
-#define NUM_OF_SIGSEGV 500 // Up to how many SIGSEGV's ? If the number is exceeded the program would be aborted.
+#define NUM_OF_RERUN 35	// Up to how many re-runs ? If the number is exceeded the program would return the last result
+#define NUM_OF_SIGSEGV 2000 // Up to how many SIGSEGV's ? If the number is exceeded the program would be aborted.
 			   // 04-21-2012 Increased for running LASSO @ FR 1e-07...
+			   // 08-18-2012 To pass the tough 4-MM test, we need some more seg-fault tolerance.
 
 struct matrix_ECC {
 	int size1;

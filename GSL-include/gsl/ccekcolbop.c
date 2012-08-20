@@ -195,21 +195,21 @@ FTV_REAL_TRY(0) {
 #ifdef DEBUG_REF
 	{ int i; int diff=0; for(i=0; i<retSize; i++) {
 		double diff = ret[i] - ret2[i]; if(diff < 0) diff = -diff;
-		if(diff > 1e-5) {printf(" >> [encode] ret and ret2 differ at position %d (%g vs %g.\n", i, 
-			ret[i], ret2[i]); diff++;}
+		if(diff > 1e-5) {DBG(printf(" >> [encode] ret and ret2 differ at position %d (%g vs %g.\n", i, 
+			ret[i], ret2[i])); diff++;}
 		}
-		if(diff==0) printf(" >> [encode] ret and ret2 agree with each other!!!!\n");
+		if(diff==0) DBG(printf(" >> [encode] ret and ret2 agree with each other!!!!\n"));
 	}
 #endif
 
 	/* 4. Return */
-	printf("[encode] input data size=%d, encoded data size=%d \
+	DBG(printf("[encode] input data size=%d, encoded data size=%d \
 	(%d tiles * %d + %d + 1 + %d x %d ECCs of ECC)\n",
-		len, retSize, nTiles, (2*BLK_LEN), nTiles, eccEccSize, ECCECC);
-	print_array(array, "Input Data", len);
-	print_array(ret, "Encoded Data", retSize);
+		len, retSize, nTiles, (2*BLK_LEN), nTiles, eccEccSize, ECCECC));
+	DBG(print_array(array, "Input Data", len));
+	DBG(print_array(ret, "Encoded Data", retSize));
 #ifdef DEBUG_REF
-	print_array(ret2, "Encoded Data 2", retSize);
+	DBG(print_array(ret2, "Encoded Data 2", retSize));
 #endif
 
 	*backup = ret;

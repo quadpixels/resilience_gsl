@@ -10,6 +10,7 @@ jmp_buf buf, buf_1, buf_2;
 
 int _count = 0;
 int _countmax = 20;
+extern int num_total_retries;
 
 noinline
 unsigned int GetJmpBufChecksum(jmp_buf* buf) {
@@ -22,7 +23,6 @@ unsigned int GetJmpBufChecksum(jmp_buf* buf) {
 
 noinline
 void MY_SET_SIGSEGV_HANDLER() {
-	printf(" >> My SIGSEGV Handler Set\n");
 	struct sigaction sa;
 	memset(&sa, 0, sizeof(struct sigaction));
 	sa.sa_handler = my_action;
@@ -33,7 +33,6 @@ void MY_SET_SIGSEGV_HANDLER() {
 
 noinline
 void MY_REMOVE_SIGSEGV_HANDLER() {
-	printf(" >> Unsetted SIGSEGV handler.\n");
 	struct sigaction sa;
 	memset(&sa, 0, sizeof(struct sigaction));
 	sa.sa_handler = SIG_DFL;
@@ -54,16 +53,17 @@ void my_action(int sig) {
 	char** strings;
 	size_t size;
 	size = backtrace(array, 10);
-	/*
 	printf(" >> Stack contents (level=%d):\n", size);
 	backtrace_symbols_fd(array, size, 2);
 #ifdef UNWIND
 	printf(" >> Stack contents by libunwind\n");
 	do_backtrace();
-	printf("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n");
+	printf(" << End of stack contents <<<<<<\n");
 #endif
-	*/
-	if(_count >= NUM_OF_SIGSEGV) { abort(); }
+	if(_count >= NUM_OF_SIGSEGV) { 
+		printf("[SIGSEGV_HANDLER] Before aborting, re-calculation has taken place %d times.\n", num_total_retries);
+		abort(); 
+	}
 	else { 
 		my_stopwatch_stop(5);
 		unsigned long sum1 = GetJmpBufChecksum(&buf), sum2 = GetJmpBufChecksum(&buf_1),

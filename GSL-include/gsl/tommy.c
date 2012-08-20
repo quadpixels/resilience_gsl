@@ -27,6 +27,7 @@
 #define noinline __attribute__((noinline))
 
 int nonEqualCount = 0;
+int num_total_retries = 0;
 void check_nan(double x, char* k) { if(/*isnan(x)*/x!=x) { printf("%s is nan\n", k); }}
 
 noinline
@@ -56,7 +57,7 @@ double my_sum_vector(const gsl_vector* v) {
 
 noinline
 double my_sum_matrix_actual(const gsl_matrix* m) {
-	printf("[my_sum_matrix_actual] m=%lx(%ldx%ld), m->tda=%ld, m->data=%x\n", (long)m, m->size1, m->size2, m->tda, (void*)(m->data));
+	DBG(printf("[my_sum_matrix_actual] m=%lx(%ldx%ld), m->tda=%ld, m->data=%x\n", (long)m, m->size1, m->size2, m->tda, (void*)(m->data)));
 	double ret = 0;
 	FTV_REAL_TRY(0) {
 		int i,j; for(i=0; i<m->size1; i++) {
@@ -75,7 +76,7 @@ double my_sum_matrix(const gsl_matrix* m) {
 	MY_SET_SIGSEGV_HANDLER();
 	int jmpret;
 	SUPERSETJMP("my_sum_matrix");
-	printf("[my_sum_matrix] m=%lx, m->tda=%ld, m->data=%lx\n", (long)m, m->tda, (void*)(m->data));
+	DBG(printf("[my_sum_matrix] m=%lx, m->tda=%ld, m->data=%lx\n", (long)m, m->tda, (void*)(m->data)));
 	return my_sum_matrix_actual(m);
 }
 
@@ -195,7 +196,7 @@ int my_dgemv_upperlower(CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t Trans, double alpha
 }
 
 void my_remove_SIGSEGV_handler() {
-	printf(" >> Unsetted SIGSEGV handler.\n");
+	DBG(printf(" >> Unsetted SIGSEGV handler.\n"));
 	struct sigaction sa;
 	memset(&sa, 0, sizeof(struct sigaction));
 	sa.sa_handler = SIG_DFL;
@@ -217,7 +218,6 @@ void my_set_SIGSEGV_handler(void) {
 
 double Matrix_Sum(const gsl_matrix* M) {
 	double s=0; int i, j, rows=M->size1, cols=M->size2;
-//	printf(" >> Matrix_Sum, size: %d x %d, addr:%x\n", rows, cols, M);
 	for(i=0; i<rows; i++) {
 		for(j=0; j<cols; j++) {
 			s = s + gsl_matrix_get(M, i, j);
@@ -276,7 +276,7 @@ void Print_Vector(const gsl_vector* V, const char* info) {
 
 int Is_GSL_Vector_Equal(const gsl_vector* A, const gsl_vector* B) /* Why? gsl_vector_equal is not available. */
 {
-	if(A->size!=B->size) { printf("Vector A and B size not equal.\n"); return 0;}
+	if(A->size!=B->size) { DBG(printf("Vector A and B size not equal.\n")); return 0;}
 	double a, b;
 	int i; for(i=0; i<A->size; i++) {
 		a=gsl_vector_get(A, i); b=gsl_vector_get(B, i);
@@ -284,7 +284,7 @@ int Is_GSL_Vector_Equal(const gsl_vector* A, const gsl_vector* B) /* Why? gsl_ve
 		double ab = a-b;
 		double r = (double)ab/(double)b; if(r<0.0) r=r*-1.0;
 		if(r > FT_TOLERANCE) { // Changed on 04-20-2012
-			printf(" A[%d]!=B[%d], %f and %f, a/b=%f, a-b=%f\n", i, i, a, b, r, ab);
+			DBG(printf(" A[%d]!=B[%d], %f and %f, a/b=%f, a-b=%f\n", i, i, a, b, r, ab));
 			return 0; }
 	}
 	return 1;
@@ -319,11 +319,11 @@ double Get_GSL_Matrix_RMSD(const gsl_matrix* A, const gsl_matrix* B) {
 	int s1, s2;
 	s1 = A->size1; s2 = A->size2; // Pretend A and B are of same size
 	if(!((A->size1 == B->size1) && (A->size2 == B->size2))) {
-		printf("[Get_GSL_Matrix_RMSD] A's size (%ldx%ld) != B's size(%ldx%ld).\n",
-		A->size1, A->size2, B->size1, B->size2);
+		DBG(printf("[Get_GSL_Matrix_RMSD] A's size (%ldx%ld) != B's size(%ldx%ld).\n",
+		A->size1, A->size2, B->size1, B->size2));
 		s1 = (A->size1 > B->size1 ? B->size1 : A->size1);
 		s2 = (A->size2 > B->size2 ? B->size2 : A->size2);
-		printf("                      Assume size is %dx%d.\n", s1, s2);
+		DBG(printf("                      Assume size is %dx%d.\n", s1, s2));
 	}
 	
 	double rsd = 0;
@@ -343,10 +343,10 @@ double Get_GSL_Vector_RMSD(const gsl_vector* X, const gsl_vector* Y) {
 	int s;
 	s = X->size;
 	if(X->size != Y->size) {
-		printf("[Get_GSL_Vector_RMSD] X's size (%ld) != Y's size (%ld).\n",
-			X->size, Y->size);
+		DBG(printf("[Get_GSL_Vector_RMSD] X's size (%ld) != Y's size (%ld).\n",
+			X->size, Y->size));
 		s = (X->size > Y->size) ? Y->size : X->size;
-		printf("                      Assume size is %d.\n", s);
+		DBG(printf("                      Assume size is %d.\n", s));
 	}
 	double rsd = 0;
 	int i;
@@ -375,7 +375,7 @@ FTV_REAL_TRY(0) {
 	int C_rc = C->size1;
 	int C_cc = C->size2;
 	if(!((A_cc==B_rc)&&(A_rc==C_rc))) {
-		printf("Size a != size b!\n"); 
+		DBG(printf("Size a != size b!\n")); 
 		my_stopwatch_stop(4);
 		return 0; }
 	srand(time(0));
@@ -384,7 +384,7 @@ FTV_REAL_TRY(0) {
 	C2r = gsl_vector_alloc(A_rc);
 	Br = gsl_vector_alloc(B_rc);
 	ABr = gsl_vector_alloc(A_rc);
-	printf("sizeof r, C2r, Br, ABr: %ld %ld %ld %ld\n", r->size, C2r->size, Br->size, ABr->size);
+	DBG(printf("sizeof r, C2r, Br, ABr: %ld %ld %ld %ld\n", r->size, C2r->size, Br->size, ABr->size));
 	int i;
 	for(i=0; i<r->size; i++) gsl_vector_set(r, i, (float)rand()/(float)RAND_MAX + 5.0f);
 	my_dgemv(TransB, alpha, B, r, 0, Br);  // Br <- B * r
@@ -424,7 +424,7 @@ int Is_GSL_DSYRK_Equal_actual(const CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t trans,
 		my_stopwatch_stop(4);
 		return 0; }
 	len = C->size1;
-	printf("[Is_GSL_DSYRK_Equal]\n");
+	DBG(printf("[Is_GSL_DSYRK_Equal]\n"));
 	gsl_matrix* tA = gsl_matrix_alloc(A->size2, A->size1);
 	gsl_matrix* uploC = gsl_matrix_alloc(C->size1, C->size2);
 	gsl_matrix_memcpy(uploC, C);
@@ -460,7 +460,7 @@ FTV_REAL_TRY(0) {
 	gsl_matrix_free(uploC);
 	gsl_matrix_free(AAt);
 	my_stopwatch_stop(4);
-	if(result==0) printf("## DSYRK not equal\n");
+	if(result==0) { DBG(printf("## DSYRK not equal\n")); }
 	return result;
 }
 
@@ -476,14 +476,14 @@ int Is_GSL_DSYRK_Equal2(const CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t trans,
 		       double alpha, const gsl_matrix* A,
 		       double beta,  const gsl_matrix* C, const gsl_matrix* C2)
 {
-	printf("[Is_GSL_DSYRK_Equal2]\n");
+	DBG(printf("[Is_GSL_DSYRK_Equal2]\n"));
 	my_stopwatch_checkpoint(4);
-	if(C2->size1 != C2->size2) { printf("[Is_GSL_DSYRK_Equal2] C2 is not square. \n"); return 0; }
+	if(C2->size1 != C2->size2) { DBG(printf("[Is_GSL_DSYRK_Equal2] C2 is not square. \n")); return 0; }
 	int n = C2->size1, i, j;
 	if(trans==CblasNoTrans) {
-		if(!((C->size1==n) && (C->size2==n) && (A->size1==n))) { printf("[Is_GSL_DSYRK_Equal2] Dimensions do not agree.\n"); return 0; }
+		if(!((C->size1==n) && (C->size2==n) && (A->size1==n))) { DBG(printf("[Is_GSL_DSYRK_Equal2] Dimensions do not agree.\n")); return 0; }
 	} else {
-		if(!((C->size1==n) && (C->size2==n) && (A->size2==n))) { printf("[Is_GSL_DSYRK_Equal2] Dimensions do not agree.\n"); return 0; }
+		if(!((C->size1==n) && (C->size2==n) && (A->size2==n))) { DBG(printf("[Is_GSL_DSYRK_Equal2] Dimensions do not agree.\n")); return 0; }
 	}
 
 	gsl_matrix* c;
@@ -505,7 +505,7 @@ FTV_REAL_TRY(0) {
 	}
 } FTV_REAL_CATCH(0) {} FTV_REAL_END(0);
 	my_stopwatch_stop(4);
-	if(ret==0) printf("## DSYRK not equal\n");
+	if(ret==0) { DBG(printf("## DSYRK not equal\n")); }
 	return ret;
 }
 
@@ -514,10 +514,10 @@ noinline
 int Is_GSL_DGEMV_Equal_actual(CBLAS_TRANSPOSE_t Trans, double alpha, const gsl_matrix* A, const gsl_vector* X, double beta, const gsl_vector* Y, const gsl_vector* Y2) {
 	/* Y2 is the output alphaAX+betaY */
 	my_stopwatch_checkpoint(4);
-	printf(" >> \n");
-	if(X==NULL) printf("X is null\n");
-	if(Y2==NULL) printf("Y2 is null\n");
-	if(Y->size != Y2->size) { printf("[Is_GSL_DGEMV_Equal]Error: X's size != Y's size\n");
+	DBG(printf(" >> \n"));
+	DBG(if(X==NULL) printf("X is null\n"););
+	DBG(if(Y2==NULL) printf("Y2 is null\n"););
+	if(Y->size != Y2->size) { DBG(printf("[Is_GSL_DGEMV_Equal]Error: X's size != Y's size\n"));
 		my_stopwatch_stop(4);
 		return 0; 
 	}
@@ -544,13 +544,13 @@ FTV_REAL_TRY(0) {
 	abserr = sum1 - sum2; if(abserr < 0) abserr = -abserr;
 	relerr = abserr / sum2; if(relerr < 0) relerr = -relerr;
 	const double tol = FT_TOLERANCE / 100;
-	printf("[Is_GSL_DGEMV_Equal] DGEMV Equal, abs.err=%g, rel.err=%g (tol=%g)\n", abserr, relerr, tol);
+	{ DBG(printf("[Is_GSL_DGEMV_Equal] DGEMV Equal, abs.err=%g, rel.err=%g (tol=%g)\n", abserr, relerr, tol)); }
 	if(abserr > tol && relerr > tol) {
 		result = 0; /* Precision problem!!! */
 	}
 	else result = 1;
 	my_stopwatch_stop(4);
-	if(result==0) printf("[Is_GSL_DGEMV_Equal] DGEMV not equal\n");
+	if(result==0) { DBG(printf("[Is_GSL_DGEMV_Equal] DGEMV not equal\n")); }
 } FTV_REAL_CATCH(0) {} FTV_REAL_END(0);
 	return result;
 }
@@ -902,6 +902,7 @@ chk_rec_c:
 		my_stopwatch_checkpoint(6);
 		printf("[DGEMM_FT3]Result: NOT Equal\n");
 		nonEqualCount = nonEqualCount + 1;
+		num_total_retries += 1;
 		if(nonEqualCount < NUM_OF_RERUN) {
 			printf("[DGEMM_FT3]Restart calculation.\n");
 			goto kk;
@@ -1022,10 +1023,10 @@ void GSL_BLAS_DGEMV_FT3(CBLAS_TRANSPOSE_t Trans, double alpha,
 	if(isEqual==1) { DBG(printf("[DGEMV_FT3]Result: Equal\n")); }
 	else {
 		my_stopwatch_checkpoint(6); 
-		printf("[DGEMV_FT3]Result: NOT Equal\n");
+		DBG(printf("[DGEMV_FT3]Result: NOT Equal\n"));
 		nonEqualCount = nonEqualCount + 1;
 		if(nonEqualCount < NUM_OF_RERUN) {
-			printf("[DGEMV_FT3]Restart calculation.\n");
+			DBG(printf("[DGEMV_FT3]Restart calculation.\n"));
 			goto kk; 
 		}
 	}
@@ -1036,7 +1037,7 @@ void GSL_BLAS_DGEMV_FT3(CBLAS_TRANSPOSE_t Trans, double alpha,
 		gsl_vector_free(vecY_bak);
 		DBG(printf("Released.\n"));
 	} else {
-		printf("Oops. Something wrong trying to free the memory. Giving up freeing.");
+		DBG(printf("Oops. Something wrong trying to free the memory. Giving up freeing."));
 	}
 	MY_REMOVE_SIGSEGV_HANDLER();
 }
@@ -1072,10 +1073,10 @@ void GSL_BLAS_DSYRK_FT3(CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t trans,
 	if(isEqual==1) { DBG(printf("[DSYRK_FT3]Result: Equal\n")); }
 	else {
 		my_stopwatch_checkpoint(6); 
-		printf("[DSYRK_FT3]Result: NOT Equal\n");
+		DBG(printf("[DSYRK_FT3]Result: NOT Equal\n"));
 		nonEqualCount = nonEqualCount + 1;
 		if(nonEqualCount < NUM_OF_RERUN) {
-			printf("[DSYRK_FT3]Restart calculation.\n");
+			DBG(printf("[DSYRK_FT3]Restart calculation.\n"));
 			jmpret = 1; 
 			goto kk; 
 		}
@@ -1103,32 +1104,32 @@ void GSL_BLAS_DTRSV_FT3(CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t TransA,
 	jmpret = sigsetjmp(buf, 1);
 	if(jmpret != 0) {
 		kk: 
-		printf("[DTRSV_FT]Recovering matrix and vector from file\n");
+		DBG(printf("[DTRSV_FT]Recovering matrix and vector from file\n"));
 		MY_MAT_CHK_RECOVER_POECC(sumA, ecMatA, (gsl_matrix*)A);
 		MY_VEC_CHK_RECOVER_POECC(sumX, ecVecX, (gsl_vector*)X);
 	}
 	gsl_vector* X_bak = gsl_vector_alloc(X->size);
 	gsl_vector_memcpy(X_bak, X);
-	printf("[DTRSV_FT]Normal call to dsyrk.. nonEqualCount=%d\n", nonEqualCount);
+	DBG(printf("[DTRSV_FT]Normal call to dsyrk.. nonEqualCount=%d\n", nonEqualCount));
 	SW3START; 
 	int ret = gsl_blas_dtrsv(uplo, TransA, Diag, A, X);
 	SW3STOP; 
-	if(ret != GSL_SUCCESS) { printf("[DTRSV_FT3] GSL_ERROR occurred\n"); isEqual=1; /* To force the routine to quit */ } 
+	if(ret != GSL_SUCCESS) { DBG(printf("[DTRSV_FT3] GSL_ERROR occurred\n")); isEqual=1; /* To force the routine to quit */ } 
 	else isEqual = Is_GSL_DTRSV_Equal(uplo, TransA, Diag, A, X_bak, X);
 	if(isEqual==1) { DBG(printf("[DTRSV_FT]Result: Equal\n")); }
 	else {
 		my_stopwatch_checkpoint(6); 
-		printf("[DTRSV_FT]Result: NOT Equal\n");
+		DBG(printf("[DTRSV_FT]Result: NOT Equal\n"));
 		nonEqualCount = nonEqualCount + 1;
 		if(nonEqualCount < NUM_OF_RERUN) {
-			printf("[DTRSV_FT]Restart calculation.\n");
+			DBG(printf("[DTRSV_FT]Restart calculation.\n"));
 			goto kk; 
 		}
 	}
 	my_stopwatch_stop(6); 
-	printf("[DTRSV_FT]Releasing memory for X_bak\n");
+	DBG(printf("[DTRSV_FT]Releasing memory for X_bak\n"));
 	gsl_vector_free(X_bak);
-	printf("Released.\n");
+	DBG(printf("Released.\n"));
 	MY_REMOVE_SIGSEGV_HANDLER();
 }
 
@@ -1153,15 +1154,15 @@ void GSL_LINALG_CHOLESKY_DECOMP_FT3(gsl_matrix* A)
 	SW3START; 
 	int ret = gsl_linalg_cholesky_decomp(A); 
 	SW3STOP; 
-	if(ret != GSL_SUCCESS) { printf("[GSL_LINALG_CHOLESKY_DECOMP_FT3] GSL_ERROR occurrec\n"); isEqual=1; /* To force the routine to quit */} 
+	if(ret != GSL_SUCCESS) { DBG(printf("[GSL_LINALG_CHOLESKY_DECOMP_FT3] GSL_ERROR occurrec\n")); isEqual=1; /* To force the routine to quit */} 
 	else isEqual = Is_GSL_linalg_cholesky_decomp_Equal(A_bak, A); 
 	if(isEqual==1) { DBG(printf("[GSL_LINALG_CHOLESKY_DECOMP_FT3] Result: Equal\n"));} 
 	else {
 		my_stopwatch_checkpoint(6); 
-		printf("[GSL_LINALG_CHOLESKY_DECOMP_FT3] Result: NOT Equal\n"); 
+		DBG(printf("[GSL_LINALG_CHOLESKY_DECOMP_FT3] Result: NOT Equal\n")); 
 		nonEqualCount = nonEqualCount+1; 
 		if(nonEqualCount < NUM_OF_RERUN) {
-			printf("[GSL_LINALG_CHOLESKY_DECOMP_FT3] Restart calculation.\n"); 
+			DBG(printf("[GSL_LINALG_CHOLESKY_DECOMP_FT3] Restart calculation.\n")); 
 			goto kk; 
 		} 
 	} 

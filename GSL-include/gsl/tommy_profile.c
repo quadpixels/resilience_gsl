@@ -49,7 +49,7 @@ struct timeval g_tvTick[SWSZ], g_tvTock[SWSZ];
 struct timeval* g_ptv[SWSZ];
 unsigned long g_time[SWSZ];
 
-#define PROFILE_DISABLED
+//#define PROFILE_DISABLED
 #ifndef PROFILE_DISABLED
 noinline
 void my_stopwatch_checkpoint(int id) {
