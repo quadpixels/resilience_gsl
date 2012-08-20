@@ -135,6 +135,25 @@ int my_dgemv_actual(CBLAS_TRANSPOSE_t Trans, double alpha, const gsl_matrix* A, 
 		}
 		int i,j;
 		double tmp=0.0, elemA, elemX, elemY;
+
+		if(Trans==CblasNoTrans) {
+			for(i=0; i<Y->size; i++) {
+				tmp = beta * gsl_vector_get(Y, i);
+				for(j=0; j<X->size; j++) {
+					tmp += gsl_vector_get(X, j) * gsl_matrix_get(A, i, j) * alpha; }
+				gsl_vector_set(Y, i, tmp);
+				printf("Y[%d]=%f ", i, tmp);
+			}
+		} else { // Trans == CblasTrans
+			for(i=0; i<Y->size; i++) {
+				tmp = beta * gsl_vector_get(Y, i);
+				for(j=0; j<X->size; j++) 
+					tmp += gsl_vector_get(X, j) * gsl_matrix_get(A, j, i) * alpha;
+				gsl_vector_set(Y, i, tmp);
+				printf("Y[%d]=%f ", i, tmp);
+			}
+		}
+		/*
 		for(i=0; i<Y->size; i++) {
 			elemY = gsl_vector_get(Y, i);
 			tmp = beta * elemY;
@@ -142,12 +161,10 @@ int my_dgemv_actual(CBLAS_TRANSPOSE_t Trans, double alpha, const gsl_matrix* A, 
 				elemX = gsl_vector_get(X, j);
 				if(Trans==CblasNoTrans) { elemA = gsl_matrix_get(A, i, j);}
 				else if(Trans==CblasTrans) { elemA = gsl_matrix_get(A, j, i); }
-	FTV_REAL_TRY(0) {
 				tmp = tmp + alpha * elemX * elemA; 
-	} FTV_REAL_CATCH(0) {} FTV_REAL_END(0);
 			}
 			gsl_vector_set(Y, i, tmp);
-		}
+		}*/
 	return 1;
 }
 
@@ -282,11 +299,12 @@ int Is_GSL_Vector_Equal(const gsl_vector* A, const gsl_vector* B) /* Why? gsl_ve
 		a=gsl_vector_get(A, i); b=gsl_vector_get(B, i);
 		if(a==b) continue; // 04-19-12 Could this be the performance culprit ...
 		double ab = a-b;
-		double r = (double)ab/(double)b; if(r<0.0) r=r*-1.0;
+		double r = (double)ab/(double)b; if(r<0) r=-r;
 		if(r > FT_TOLERANCE) { // Changed on 04-20-2012
 			DBG(printf(" A[%d]!=B[%d], %f and %f, a/b=%f, a-b=%f\n", i, i, a, b, r, ab));
 			return 0; }
 	}
+	DBG(printf(" A[0]=%f, B[0]=%f\n", A->data[0], B->data[0]));
 	return 1;
 }
 
@@ -367,8 +385,8 @@ int Is_GSL_MM_Equal_actual(CBLAS_TRANSPOSE_t TransA, CBLAS_TRANSPOSE_t TransB,
 		    double alpha, const gsl_matrix* A, const gsl_matrix* B,
 		    double beta,  const gsl_matrix* C, const gsl_matrix* C2) {
 	int result;
-FTV_REAL_TRY(0) {
 	my_stopwatch_checkpoint(4);
+FTV_REAL_TRY(0) {
 	int A_rc = (TransA == CblasNoTrans) ? A->size1 : A->size2;
 	int A_cc = (TransA == CblasNoTrans) ? A->size2 : A->size1;
 	int B_rc = (TransB == CblasNoTrans) ? B->size1 : B->size2;
@@ -381,12 +399,12 @@ FTV_REAL_TRY(0) {
 	srand(time(0));
 	gsl_vector* r = gsl_vector_alloc(C_cc);
 	gsl_vector* C2r, *Br, *ABr;
-	C2r = gsl_vector_alloc(A_rc);
-	Br = gsl_vector_alloc(B_rc);
-	ABr = gsl_vector_alloc(A_rc);
+	C2r = gsl_vector_alloc(A_rc); gsl_vector_set_zero(C2r);
+	Br = gsl_vector_alloc(B_rc); gsl_vector_set_zero(Br);
+	ABr = gsl_vector_alloc(A_rc); gsl_vector_set_zero(ABr);
 	DBG(printf("sizeof r, C2r, Br, ABr: %ld %ld %ld %ld\n", r->size, C2r->size, Br->size, ABr->size));
 	int i;
-	for(i=0; i<r->size; i++) gsl_vector_set(r, i, (float)rand()/(float)RAND_MAX + 5.0f);
+	for(i=0; i<r->size; i++) gsl_vector_set(r, i, (double)/*rand()*/i/100);
 	my_dgemv(TransB, alpha, B, r, 0, Br);  // Br <- B * r
 	my_dgemv(TransA, 1, A, Br, 0, ABr);    // ABr <- A * B * r
 	my_dgemv(CblasNoTrans, beta, C, r, 1, ABr); // ABr <- ABr + C * r
