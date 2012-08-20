@@ -398,6 +398,7 @@ FTV_REAL_TRY(0) {
 	gsl_vector_free(r);
 	my_stopwatch_stop(4);
 	if(result==0) printf("## DGEMM not equal\n");
+	else printf("[Is_GSL_MM_Equal] DGEMM is equal.\n");
 } FTV_REAL_CATCH(0) {} FTV_REAL_END(0);
 	return result;
 }
