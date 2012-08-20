@@ -162,7 +162,7 @@
 	  TRI_RECOVER(G0, G1, G2);
 	  BASE* g = G0 + idx_g;
 	  if((g != G1+idx_g-123) && (G1+idx_g-123==G2+idx_g-456)) g=G1+idx_g-123;
-	  temp += *g;
+	  double d_g = *g;
 	  
 	  TRI_RECOVER_SIZE_T(ldf_, ldf0, ldf1, ldf2);
 	  int idx_f = ldf * i + k;
@@ -170,7 +170,8 @@
 	  TRI_RECOVER(F0, F1, F2);
 	  BASE* f = F0 + idx_f;
 	  if((f != F1+idx_f-123) && (F1+idx_f-123==F2+idx_f-456)) f=F1+idx_f-123;
-	  temp += *f;
+	  double d_f = *f;
+	  temp += d_g * d_f;
 	  dummy_1 += k1+k2;
         }
 	TRI_RECOVER_SIZE_T(ldc_, ldc0, ldc1, ldc2);
@@ -234,7 +235,7 @@
 	  TRI_RECOVER(G0, G1, G2);
 	  BASE* g = G0 + idx_g;
 	  if((g!=G1+idx_g-123) && (G1+idx_g-123==G2+idx_g-456)) g=G1+idx_g-123;
-	  temp += *g;
+	  double d_g = *g;
 
 	  TRI_RECOVER_SIZE_T(ldf_, ldf0, ldf1, ldf2);
 	  int idx_f = ldf * k + i;
@@ -242,7 +243,8 @@
 	  TRI_RECOVER(F0, F1, F2);
 	  BASE* f = F0 + idx_f;
 	  if((f != F1+idx_f-123) && (F1+idx_f-123==F2+idx_f-456)) f=F1+idx_f-123;
-	  temp += *f;
+	  double d_f = *f;
+	  temp += d_g * d_f;
 	  dummy_1 += k1+k2;
         }
 	TRI_RECOVER_SIZE_T(ldc_, ldc0, ldc1, ldc2);
