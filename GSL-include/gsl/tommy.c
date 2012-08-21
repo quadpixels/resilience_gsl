@@ -142,7 +142,6 @@ int my_dgemv_actual(CBLAS_TRANSPOSE_t Trans, double alpha, const gsl_matrix* A, 
 				for(j=0; j<X->size; j++) {
 					tmp += gsl_vector_get(X, j) * gsl_matrix_get(A, i, j) * alpha; }
 				gsl_vector_set(Y, i, tmp);
-				printf("Y[%d]=%f ", i, tmp);
 			}
 		} else { // Trans == CblasTrans
 			for(i=0; i<Y->size; i++) {
@@ -150,21 +149,8 @@ int my_dgemv_actual(CBLAS_TRANSPOSE_t Trans, double alpha, const gsl_matrix* A, 
 				for(j=0; j<X->size; j++) 
 					tmp += gsl_vector_get(X, j) * gsl_matrix_get(A, j, i) * alpha;
 				gsl_vector_set(Y, i, tmp);
-				printf("Y[%d]=%f ", i, tmp);
 			}
 		}
-		/*
-		for(i=0; i<Y->size; i++) {
-			elemY = gsl_vector_get(Y, i);
-			tmp = beta * elemY;
-			for(j=0; j<X->size; j++) {
-				elemX = gsl_vector_get(X, j);
-				if(Trans==CblasNoTrans) { elemA = gsl_matrix_get(A, i, j);}
-				else if(Trans==CblasTrans) { elemA = gsl_matrix_get(A, j, i); }
-				tmp = tmp + alpha * elemX * elemA; 
-			}
-			gsl_vector_set(Y, i, tmp);
-		}*/
 	return 1;
 }
 
@@ -656,7 +642,7 @@ int check_aat_triangle_actual(const gsl_matrix* C, CBLAS_UPLO_t uplo, int row, i
 FTV_REAL_TRY(0) {
 	DBG(printf("check_aat_triangle [%d, %d] len=%d\n", row, col, len));
 	/* Let's say, we have a "body" and two "flanks" */
-	if(C->size1 != C->size2) { printf("C is not square.\n"); return 0; }
+	if(C->size1 != C->size2) { printf("[check_aat_triangle_actual] !! C is not square.\n"); return 0; }
 	int body_rs, body_re, body_cs, body_ce, body_len;
 	int uflank_row, uflank_col, dflank_row, dflank_col, flank_len;
 	if(len <= 2) {
@@ -762,9 +748,9 @@ FTV_REAL_TRY(0) {
 	for(i=0; i<m; i++) {
 		double tmp = 0;
 		if(trans == CblasNoTrans) 
-		{ for(j=colstart; j<=colend; j++) tmp=tmp+gsl_vector_get(v, j)*gsl_matrix_get(A, j, i)*alpha; }
+		{ for(j=colstart; j<=colend; j++) tmp=tmp+gsl_vector_get(v, j)*gsl_matrix_get(A, j, i); } // Fixed on 08-21-2012
 		else
-		{ for(j=colstart; j<=colend; j++) tmp=tmp+gsl_vector_get(v, j)*gsl_matrix_get(A, i, j)*alpha; }
+		{ for(j=colstart; j<=colend; j++) tmp=tmp+gsl_vector_get(v, j)*gsl_matrix_get(A, i, j); } // Fixed on 08-21-2012
 		gsl_vector_set(atv, i, tmp);
 	}
 	for(i=rowstart; i<=rowend; i++) {
@@ -1066,29 +1052,68 @@ void GSL_BLAS_DSYRK_FT3(CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t trans,
 	           double alpha, const gsl_matrix* A,
 		   double beta, gsl_matrix* C)
 {
+	/* Protect pointers to matrix A and matrix C */
+	unsigned long matA0, matA1, matA2,
+	              matC0, matC1, matC2,
+		      matCbk0, matCbk1, matCbk2;
+	TRIPLICATE(A, matA0, matA1, matA2);
+
+	MY_SET_SIGSEGV_HANDLER();
+	nonEqualCount=0;
+
+	/* Protect size_t of A and C */
+	size_t mas10, mas11, mas12, mas20, mas21, mas22;
+	size_t mcs10, mcs11, mcs12, mcs20, mcs21, mcs22;
+	TRIPLICATE_SIZE_T(A->size1, mas10, mas11, mas12);
+	TRIPLICATE_SIZE_T(A->size2, mas20, mas21, mas22);
+	TRIPLICATE_SIZE_T(C->size1, mcs10, mcs11, mcs12);
+	TRIPLICATE_SIZE_T(C->size2, mcs20, mcs21, mcs22);
+
 	double sumA, sumC;
 	sumA=my_sum_matrix(A); sumC=my_sum_matrix(C); 
+
+	/* Protect ptrs to ECC codes. */
 	void *ecMatA, *ecMatC;
-	nonEqualCount=0;
-	MY_SET_SIGSEGV_HANDLER();
+	unsigned long ema0, ema1, ema2, emc0, emc1, emc2;
+
 	gsl_matrix* C_bak = gsl_matrix_alloc(C->size1, C->size2);
 	gsl_matrix_memcpy(C_bak, C);
+	TRIPLICATE(C_bak, matCbk0, matCbk1, matCbk2);
+
 	encode((A->data), (A->size1*A->size2), &ecMatA); 
+	TRIPLICATE(ecMatA, ema0, ema1, ema2);
 	encode((C_bak->data), (C_bak->size1*C_bak->size2), &ecMatC); 
+	TRIPLICATE(ecMatC, emc0, emc1, emc2);
+
 	int jmpret, isEqual;
-	jmpret = sigsetjmp(buf, 1);
+	SUPERSETJMP("[DSYRK_FT3] After encoding\n");
 	if(jmpret!=0) {
 		kk: 
 		DBG(printf("[DSYRK_FT3]Recovering matrices from error correction data (jmpret=%d)\n", jmpret));
-		MY_MAT_CHK_RECOVER_POECC(sumA, ecMatA, (gsl_matrix*)A);
-		MY_MAT_CHK_RECOVER_POECC(sumC, ecMatC, (gsl_matrix*)C);
+		size_t *mas1 = &(((gsl_matrix*)A)->size1);
+		size_t *mas2 = &(((gsl_matrix*)A)->size2);
+		TRI_RECOVER_SIZE_T((*mas1), mas10, mas11, mas12);
+		TRI_RECOVER_SIZE_T((*mas2), mas20, mas21, mas22);
+		TRI_RECOVER(matA0, matA1, matA2);
+		TRI_RECOVER(ema0, ema1, ema2);
+		MY_MAT_CHK_RECOVER_POECC(sumA, (void*)ema0, (gsl_matrix*)matA0);
+
+		size_t *mcs1 = &(((gsl_matrix*)C)->size1);
+		size_t *mcs2 = &(((gsl_matrix*)C)->size2);
+		TRI_RECOVER_SIZE_T((*mcs1), mcs10, mcs11, mcs12);
+		TRI_RECOVER_SIZE_T((*mcs2), mcs20, mcs21, mcs22);
+		TRI_RECOVER(matC0, matC1, matC2);
+		TRI_RECOVER(emc0, emc1, emc2);
+		MY_MAT_CHK_RECOVER_POECC(sumC, (void*)emc0, (gsl_matrix*)matC0);
+		gsl_matrix_memcpy(C_bak, C); 
 	}
-	gsl_matrix_memcpy(C_bak, C); 
 	DBG(printf("[DSYRK_FT3]Normal call to dsyrk.. nonEqualCount=%d\n", nonEqualCount));
 	my_stopwatch_checkpoint(3); 
 	gsl_blas_dsyrk(uplo, trans, alpha, A, beta, C);
-	my_stopwatch_stop(3); 
+	my_stopwatch_stop(3);
+	my_stopwatch_checkpoint(11); // Time spent in checks
 	isEqual = Is_GSL_DSYRK_Equal2(uplo, trans, alpha, A, beta, C_bak, C);
+	my_stopwatch_stop(11);
 	if(isEqual==1) { DBG(printf("[DSYRK_FT3]Result: Equal\n")); }
 	else {
 		my_stopwatch_checkpoint(6); 
@@ -1102,8 +1127,13 @@ void GSL_BLAS_DSYRK_FT3(CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t trans,
 	}
 	my_stopwatch_stop(6); 
 	DBG(printf("[DSYRK_FT3]Releasing memory for C_bak\n"));
-	gsl_matrix_free(C_bak);
-	DBG(printf("Released.\n"));
+	SUPERSETJMP("Just before free");
+	if(jmpret == 0) {
+		gsl_matrix_free(C_bak);
+		DBG(printf("Released.\n"));
+	} else {
+		
+	}
 	MY_REMOVE_SIGSEGV_HANDLER();
 }
 
