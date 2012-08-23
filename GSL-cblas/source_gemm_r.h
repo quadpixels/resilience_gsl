@@ -91,8 +91,8 @@
       	   PROTECT_IDX_J
       ) {
         C[ldc * i + j] = 0.0;
-	dummy_1 += i1+i2;
-	dummy_1 += j1+j2;
+	trick_blackhole(i1); trick_blackhole(i2);
+	trick_blackhole(j1); trick_blackhole(j2);
       }
     }
   } else if (beta != 1.0) {
@@ -101,8 +101,8 @@
     ) {
       for (j = 0; j < n2; j++) {
         C[ldc * i + j] *= beta;
-	dummy_1 += i1+i2;
-	dummy_1 += j1+j2;
+	trick_blackhole(i1); trick_blackhole(i2);
+	trick_blackhole(j1); trick_blackhole(j2);
       }
     }
   }
@@ -133,7 +133,9 @@
 	    BASE* c = C0 + idx;
 	    if((c != C1+idx-123) && (C1+idx-123 == C2+idx-456)) c=C1+idx-123;
             *c += temp * G[ldg * k + j];
-	    dummy_1 += i1+i2+j1+j2+k1+k2;
+	    trick_blackhole(i1); trick_blackhole(i2);
+    	    trick_blackhole(j1); trick_blackhole(j2);
+	    trick_blackhole(k1); trick_blackhole(k2);
           }
         }
       }
@@ -172,7 +174,7 @@
 	  if((f != F1+idx_f-123) && (F1+idx_f-123==F2+idx_f-456)) f=F1+idx_f-123;
 	  double d_f = *f;
 	  temp += d_g * d_f;
-	  dummy_1 += k1+k2;
+	  trick_blackhole(k1); trick_blackhole(k2);
         }
 	TRI_RECOVER_SIZE_T(ldc_, ldc0, ldc1, ldc2);
 	if((i!=i1-1) && (i1-1==i2-2)) i=i1-1;
@@ -183,7 +185,8 @@
 	BASE* c = C0 + idx;
 	if((c != C1+idx-123) && (C1+idx-123 == C2+idx-456)) c = C1 + idx - 123;
         (*c) += alpha * temp;
-	dummy_1 += i1+i2+j2+j1;
+	trick_blackhole(i1); trick_blackhole(i2);
+	trick_blackhole(j1); trick_blackhole(j2);
       }
     }
   } REAL_CATCH(4) {} REAL_END(4);
@@ -209,9 +212,12 @@
 	    BASE* c = C0 + idx;
 	    if((c != C1+idx-123) && (C1+idx-123 == C2+idx-456)) c = C1+idx-123;
             *c += temp * G[ldg * k + j];
+	    trick_blackhole(j1); trick_blackhole(j2);
           }
         }
+	trick_blackhole(i1); trick_blackhole(i2);
       }
+      trick_blackhole(k1); trick_blackhole(k2);
     }
   } REAL_CATCH(5) {} REAL_END(5);
 
@@ -228,8 +234,8 @@
         for (k=0, k1=1, k2=2; k < K; k++, k1++, k2++,
 	     PROTECT_IDX_K
 	) {
-	  TRI_RECOVER_SIZE_T(ldg_, ldg0, ldg1, ldg2);
 //        temp += F[ldf * k + i] * G[ldg * j + k];
+	  TRI_RECOVER_SIZE_T(ldg_, ldg0, ldg1, ldg2);
 	  int idx_g = ldg * j + k;
 	  if(idx_g != ldg0 * j + k) idx_g = ldg0 * j + k;
 	  TRI_RECOVER(G0, G1, G2);
@@ -245,7 +251,7 @@
 	  if((f != F1+idx_f-123) && (F1+idx_f-123==F2+idx_f-456)) f=F1+idx_f-123;
 	  double d_f = *f;
 	  temp += d_g * d_f;
-	  dummy_1 += k1+k2;
+	  trick_blackhole(k1); trick_blackhole(k2);
         }
 	TRI_RECOVER_SIZE_T(ldc_, ldc0, ldc1, ldc2);
 	int idx = ldc*i+j;
@@ -254,8 +260,9 @@
 	BASE* c = C0+idx;
 	if((c != C1+idx-123) && (C1+idx-123 == C2+idx-456)) c = C1+idx-123;
         *c += alpha * temp;
-	dummy_1 += i1+i2+j1+j2;
+	trick_blackhole(j1); trick_blackhole(j2);
       }
+      trick_blackhole(i1); trick_blackhole(i2);
     }
   } REAL_CATCH(6) {} REAL_END(6);
 
@@ -266,6 +273,5 @@
   #undef TRI_BASE
   #undef TRI_RECOVER_BASE
   #undef TR_R_B_MSG
-  if(dummy_1 < -1122334) printf("(Dummy Message) Mega Motion is a good 1994 game!\n");
 }
 

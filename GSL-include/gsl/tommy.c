@@ -76,7 +76,8 @@ double my_sum_matrix(const gsl_matrix* m) {
 	MY_SET_SIGSEGV_HANDLER();
 	int jmpret;
 	SUPERSETJMP("my_sum_matrix");
-	DBG(printf("[my_sum_matrix] m=%lx, m->tda=%ld, m->data=%lx\n", (long)m, m->tda, (void*)(m->data)));
+	DBG(printf("[my_sum_matrix] m=%lx", (long)m));
+	DBG(printf(", m->tda=%ld, m->data=%lx\n", m->tda, (void*)(m->data)));
 	return my_sum_matrix_actual(m);
 }
 
@@ -287,7 +288,7 @@ int Is_GSL_Vector_Equal(const gsl_vector* A, const gsl_vector* B) /* Why? gsl_ve
 		double ab = a-b;
 		double r = (double)ab/(double)b; if(r<0) r=-r;
 		if(r > FT_TOLERANCE) { // Changed on 04-20-2012
-			DBG(printf(" A[%d]!=B[%d], %f and %f, a/b=%f, a-b=%f\n", i, i, a, b, r, ab));
+			DBG(printf(" A[%d]!=B[%d], %f and %f, (a-b)/b=%f, a-b=%f\n", i, i, a, b, r, ab));
 			return 0; }
 	}
 	DBG(printf(" A[0]=%f, B[0]=%f\n", A->data[0], B->data[0]));
@@ -312,7 +313,7 @@ int Is_GSL_Matrix_Equal(const gsl_matrix* A, const gsl_matrix* B)
 			double ab = aa-bb;
 			double r = (double)ab/(double)bb; if(r<0) r=r*-1;
 			if(r > FT_TOLERANCE) { 
-			DBG(printf(" A[%d,%d]!=B[%d,%d], %g and %g, a/b=%f\n", i, j, i, j, aa, bb, r));
+			DBG(printf(" A[%d,%d]!=B[%d,%d], %g and %g, (a-b)/b=%f\n", i, j, i, j, aa, bb, r));
 			return 0; }
 		}
 	}
@@ -432,17 +433,35 @@ int Is_GSL_DSYRK_Equal_actual(const CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t trans,
 	DBG(printf("[Is_GSL_DSYRK_Equal]\n"));
 	gsl_matrix* tA = gsl_matrix_alloc(A->size2, A->size1);
 	gsl_matrix* uploC = gsl_matrix_alloc(C->size1, C->size2);
-	gsl_matrix_memcpy(uploC, C);
+	if(uplo == CblasUpper) { /* Fixed on 2012-08-21 */
+		for(i=0; i<len; i++) {
+			for(j=i; j<len; j++)
+				gsl_matrix_set(uploC, i, j, gsl_matrix_get(C, i, j)*beta);
+		}
+		for(i=1; i<len; i++) {
+			for(j=0; j<i; j++)
+				gsl_matrix_set(uploC, i, j, gsl_matrix_get(C, i, j));
+		}
+	} else {
+		for(i=0; i<len; i++) {
+			for(j=i+1; j<len; j++) 
+				gsl_matrix_set(uploC, i, j, gsl_matrix_get(C, i, j));
+		}
+		for(i=0; i<len; i++) {
+			for(j=0; j<=i; j++)
+				gsl_matrix_set(uploC, i, j, gsl_matrix_get(C, i, j)*beta);
+		}
+	}
 	gsl_matrix_transpose_memcpy(tA, A);
 
 	gsl_matrix* AAt = gsl_matrix_alloc(len, len);
 FTV_REAL_TRY(0) {
 	if(trans==CblasNoTrans) {
 //		gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 1.0, A, tA, 0.0, AAt); // I think this causes problems
-		my_dgemm(CblasNoTrans, CblasNoTrans, 1.0, A, tA, 0.0, AAt);
+		my_dgemm(CblasNoTrans, CblasNoTrans, alpha, A, tA, 0.0, AAt);
 	} else {
 //		gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 1.0, tA, A, 0.0, AAt);
-		my_dgemm(CblasNoTrans, CblasNoTrans, 1.0, tA, A, 0.0, AAt);
+		my_dgemm(CblasNoTrans, CblasNoTrans, alpha, tA, A, 0.0, AAt);
 	}
 } FTV_REAL_CATCH(0) {} FTV_REAL_END(0);
 	if(uplo == CblasUpper) {
@@ -454,7 +473,7 @@ FTV_REAL_TRY(0) {
 		}
 	} else if(uplo == CblasLower) {
 		for(i=0; i<len; i++) {
-			for(j=i+1; j<C->size1; j++) {
+			for(j=i+1; j<len; j++) {
 //				gsl_matrix_set(uploC, i, j, 0);
 				gsl_matrix_set(AAt,   i, j, 0);
 			}
@@ -477,7 +496,8 @@ int Is_GSL_DSYRK_Equal(const CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t trans,
 	return Is_GSL_DSYRK_Equal_actual(uplo, trans, alpha, A, beta, C, C2);
 }
 
-int Is_GSL_DSYRK_Equal2(const CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t trans,
+noinline
+int Is_GSL_DSYRK_Equal2_actual(const CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t trans,
 		       double alpha, const gsl_matrix* A,
 		       double beta,  const gsl_matrix* C, const gsl_matrix* C2)
 {
@@ -558,6 +578,18 @@ FTV_REAL_TRY(0) {
 	if(result==0) { DBG(printf("[Is_GSL_DGEMV_Equal] DGEMV not equal\n")); }
 } FTV_REAL_CATCH(0) {} FTV_REAL_END(0);
 	return result;
+}
+
+noinline
+int Is_GSL_DSYRK_Equal2(const CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t trans,
+		       double alpha, const gsl_matrix* A,
+		       double beta,  const gsl_matrix* C, const gsl_matrix* C2)
+{
+	MY_SET_SIGSEGV_HANDLER();
+	int jmpret;
+	SUPERSETJMP("Is_GSL_DSYRK_Equal2");
+	trick_me_jr(jmpret);
+	return Is_GSL_DSYRK_Equal2_actual(uplo, trans, alpha, A, beta, C, C2);
 }
 
 noinline
@@ -1057,6 +1089,7 @@ void GSL_BLAS_DSYRK_FT3(CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t trans,
 	              matC0, matC1, matC2,
 		      matCbk0, matCbk1, matCbk2;
 	TRIPLICATE(A, matA0, matA1, matA2);
+	TRIPLICATE(C, matC0, matC1, matC2);
 
 	MY_SET_SIGSEGV_HANDLER();
 	nonEqualCount=0;
@@ -1109,10 +1142,12 @@ void GSL_BLAS_DSYRK_FT3(CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t trans,
 	}
 	DBG(printf("[DSYRK_FT3]Normal call to dsyrk.. nonEqualCount=%d\n", nonEqualCount));
 	my_stopwatch_checkpoint(3); 
+	SUPERSETJMP("Just before dsyrk");
+	if(jmpret != 0) { goto kk; }
 	gsl_blas_dsyrk(uplo, trans, alpha, A, beta, C);
 	my_stopwatch_stop(3);
 	my_stopwatch_checkpoint(11); // Time spent in checks
-	isEqual = Is_GSL_DSYRK_Equal2(uplo, trans, alpha, A, beta, C_bak, C);
+	isEqual = Is_GSL_DSYRK_Equal2(uplo, trans, alpha, A, beta, C_bak, C); // May use Equal or Equal2
 	my_stopwatch_stop(11);
 	if(isEqual==1) { DBG(printf("[DSYRK_FT3]Result: Equal\n")); }
 	else {
@@ -1121,7 +1156,6 @@ void GSL_BLAS_DSYRK_FT3(CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t trans,
 		nonEqualCount = nonEqualCount + 1;
 		if(nonEqualCount < NUM_OF_RERUN) {
 			DBG(printf("[DSYRK_FT3]Restart calculation.\n"));
-			jmpret = 1; 
 			goto kk; 
 		}
 	}

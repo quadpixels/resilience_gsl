@@ -1,7 +1,7 @@
 #include "triplicate.h"
 
 // Use this to stop the compiler from removing sigsetjmp!
-
+static int dummy_1 = 0;
 noinline void trick_me_jr(int jmpret) {
 	if(jmpret == 999) printf("Jack is in the box!\n");
 }
@@ -12,6 +12,11 @@ unsigned long trick_me_ptr(unsigned long ptr, int delta) {
 noinline
 size_t trick_me_size_t(size_t in, size_t delta) {
 	return in + delta;
+}
+noinline
+void trick_blackhole(size_t anything) {
+	dummy_1 += anything;
+	if(dummy_1 == -2444551) printf("Mega Motion is a good 1994 game!\n");
 }
 noinline
 unsigned int GetMatrixChecksum(const gsl_matrix* m) {
