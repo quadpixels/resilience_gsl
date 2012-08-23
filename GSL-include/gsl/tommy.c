@@ -28,6 +28,7 @@
 
 int nonEqualCount = 0;
 int num_total_retries = 0;
+double is_equal_knob = FT_TOLERANCE;
 void check_nan(double x, char* k) { if(/*isnan(x)*/x!=x) { printf("%s is nan\n", k); }}
 
 noinline
@@ -287,8 +288,8 @@ int Is_GSL_Vector_Equal(const gsl_vector* A, const gsl_vector* B) /* Why? gsl_ve
 		if(a==b) continue; // 04-19-12 Could this be the performance culprit ...
 		double ab = a-b;
 		double r = (double)ab/(double)b; if(r<0) r=-r;
-		if(r > FT_TOLERANCE) { // Changed on 04-20-2012
-			DBG(printf(" A[%d]!=B[%d], %f and %f, (a-b)/b=%f, a-b=%f\n", i, i, a, b, r, ab));
+		if(r > is_equal_knob) { // Changed on 04-20-2012
+			DBG(printf(" A[%d]!=B[%d], %f and %f, (a-b)/b=%f, a-b=%f, knob=%g\n", i, i, a, b, r, ab, is_equal_knob));
 			return 0; }
 	}
 	DBG(printf(" A[0]=%f, B[0]=%f\n", A->data[0], B->data[0]));
@@ -312,8 +313,8 @@ int Is_GSL_Matrix_Equal(const gsl_matrix* A, const gsl_matrix* B)
 			if(aa==bb) continue; // 04-19-12 Could this be the performance culprit ...
 			double ab = aa-bb;
 			double r = (double)ab/(double)bb; if(r<0) r=r*-1;
-			if(r > FT_TOLERANCE) { 
-			DBG(printf(" A[%d,%d]!=B[%d,%d], %g and %g, (a-b)/b=%f\n", i, j, i, j, aa, bb, r));
+			if(r > is_equal_knob) { 
+			DBG(printf(" A[%d,%d]!=B[%d,%d], %g and %g, (a-b)/b=%f, knob=%g\n", i, j, i, j, aa, bb, r, is_equal_knob));
 			return 0; }
 		}
 	}
@@ -519,7 +520,7 @@ int Is_GSL_DSYRK_Equal2_actual(const CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t trans,
 		}
 	}
 	int ret;
-FTV_REAL_TRY(0) {
+//FTV_REAL_TRY(0) {
 	if(beta != 0) {
 		if(uplo==CblasUpper) ret = check_aat_triangle(c, uplo, 0, n-1, n, alpha, A, trans);
 		if(uplo==CblasLower) ret = check_aat_triangle(c, uplo, n-1, 0, n, alpha, A, trans);
@@ -528,7 +529,7 @@ FTV_REAL_TRY(0) {
 		if(uplo==CblasUpper) ret = check_aat_triangle(C2, uplo, 0, n-1, n, alpha, A, trans);
 		if(uplo==CblasLower) ret = check_aat_triangle(C2, uplo, n-1, 0, n, alpha, A, trans);	
 	}
-} FTV_REAL_CATCH(0) {} FTV_REAL_END(0);
+//} FTV_REAL_CATCH(0) {} FTV_REAL_END(0);
 	my_stopwatch_stop(4);
 	if(ret==0) { DBG(printf("## DSYRK not equal\n")); }
 	return ret;
@@ -671,7 +672,7 @@ int Is_GSL_linalg_cholesky_decomp_Equal(const gsl_matrix* A, const gsl_matrix* A
 
 noinline 
 int check_aat_triangle_actual(const gsl_matrix* C, CBLAS_UPLO_t uplo, int row, int col, int len, double alpha, const gsl_matrix* A, CBLAS_TRANSPOSE_t trans) {
-FTV_REAL_TRY(0) {
+//FTV_REAL_TRY(0) {
 	DBG(printf("check_aat_triangle [%d, %d] len=%d\n", row, col, len));
 	/* Let's say, we have a "body" and two "flanks" */
 	if(C->size1 != C->size2) { printf("[check_aat_triangle_actual] !! C is not square.\n"); return 0; }
@@ -714,7 +715,7 @@ FTV_REAL_TRY(0) {
 		ret = check_aat_triangle(C, uplo, dflank_row, dflank_col, flank_len, alpha, A, trans); if(ret==0) { DBG(printf("$")); return 0; }
 		return 1;
 	}
-} FTV_REAL_CATCH(0) {} FTV_REAL_END(0);
+//} FTV_REAL_CATCH(0) {} FTV_REAL_END(0);
 	return 0;
 }
 
@@ -793,7 +794,6 @@ FTV_REAL_TRY(0) {
 		{ for(j=0; j<m; j++) tmp=tmp+gsl_vector_get(atv, j)*gsl_matrix_get(A, j, i)*alpha; }
 		gsl_vector_set(aatv, i, tmp);
 	}
-
 	ret = Is_GSL_Vector_Equal(aatv, cv);
 	free(cv); free(aatv); free(atv); free(v);
 } FTV_REAL_CATCH(0) {} FTV_REAL_END(0);
@@ -933,6 +933,7 @@ chk_rec_c:
 	gsl_blas_dgemm(TransA, TransB, alpha, matA, matB, beta, matC);
 	SW3STOP;
 	DBG(printf("[DGEMM_FT3] Check Results..\n"));
+	ResetIsEqualKnob();
 	isEqual = Is_GSL_MM_Equal(TransA, TransB, alpha, matA, matB, beta, matC_bak, matC);
 	if(isEqual==1) { DBG(printf("[DGEMM_FT3]Result: Equal\n")); }
 	else {
@@ -1055,6 +1056,7 @@ void GSL_BLAS_DGEMV_FT3(CBLAS_TRANSPOSE_t Trans, double alpha,
 	gsl_blas_dgemv(Trans, alpha, matA, vecX, beta, vecY);
 	SW3STOP; 
 	my_stopwatch_checkpoint(11); 
+	ResetIsEqualKnob();
 	isEqual = Is_GSL_DGEMV_Equal(Trans, alpha, matA, vecX, beta, vecY_bak, vecY);
 	my_stopwatch_stop(11); 
 	if(isEqual==1) { DBG(printf("[DGEMV_FT3]Result: Equal\n")); }
@@ -1135,10 +1137,10 @@ void GSL_BLAS_DSYRK_FT3(CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t trans,
 		size_t *mcs2 = &(((gsl_matrix*)C)->size2);
 		TRI_RECOVER_SIZE_T((*mcs1), mcs10, mcs11, mcs12);
 		TRI_RECOVER_SIZE_T((*mcs2), mcs20, mcs21, mcs22);
-		TRI_RECOVER(matC0, matC1, matC2);
+		TRI_RECOVER(matCbk0, matCbk1, matCbk2);
 		TRI_RECOVER(emc0, emc1, emc2);
-		MY_MAT_CHK_RECOVER_POECC(sumC, (void*)emc0, (gsl_matrix*)matC0);
-		gsl_matrix_memcpy(C_bak, C); 
+		MY_MAT_CHK_RECOVER_POECC(sumC, (void*)emc0, (gsl_matrix*)matCbk0);
+		gsl_matrix_memcpy(C, C_bak); 
 	}
 	DBG(printf("[DSYRK_FT3]Normal call to dsyrk.. nonEqualCount=%d\n", nonEqualCount));
 	my_stopwatch_checkpoint(3); 
@@ -1147,6 +1149,8 @@ void GSL_BLAS_DSYRK_FT3(CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t trans,
 	gsl_blas_dsyrk(uplo, trans, alpha, A, beta, C);
 	my_stopwatch_stop(3);
 	my_stopwatch_checkpoint(11); // Time spent in checks
+	ResetIsEqualKnob(); // RK's checkers requires larger tolerance, perhaps, perhaps ...
+	AdjustIsEqualKnob(2);
 	isEqual = Is_GSL_DSYRK_Equal2(uplo, trans, alpha, A, beta, C_bak, C); // May use Equal or Equal2
 	my_stopwatch_stop(11);
 	if(isEqual==1) { DBG(printf("[DSYRK_FT3]Result: Equal\n")); }
@@ -1156,9 +1160,11 @@ void GSL_BLAS_DSYRK_FT3(CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t trans,
 		nonEqualCount = nonEqualCount + 1;
 		if(nonEqualCount < NUM_OF_RERUN) {
 			DBG(printf("[DSYRK_FT3]Restart calculation.\n"));
+			if((nonEqualCount % 4) == 0) AdjustIsEqualKnob(1);
 			goto kk; 
 		}
 	}
+	ResetIsEqualKnob();
 	my_stopwatch_stop(6); 
 	DBG(printf("[DSYRK_FT3]Releasing memory for C_bak\n"));
 	SUPERSETJMP("Just before free");
@@ -1310,4 +1316,25 @@ float MY_VEC_CHK_RECOVER_POECC(double sum, void* ecVec, gsl_vector* vec) {
 	}
 	my_stopwatch_stop(9);
 }
+
+noinline double GetIsEqualKnob() {
+	return is_equal_knob;
+}
+
+noinline double ResetIsEqualKnob() {
+	is_equal_knob = FT_TOLERANCE;
+	DBG(printf("[ResetIsEqualKnob] Knob reset to %g\n", is_equal_knob));
+}
+
+noinline double AdjustIsEqualKnob(int pwr10) {
+	int i;
+	if(pwr10 > 0) {
+		for(i=0; i<pwr10; i++) is_equal_knob *= 10;	
+	} else {
+		pwr10 = -pwr10;
+		for(i=0; i<pwr10; i++) is_equal_knob /= 10;
+	}
+	DBG(printf("[AdjustIsEqualKnob] Knob adjusted to %g\n", is_equal_knob));
+}
+
 #endif

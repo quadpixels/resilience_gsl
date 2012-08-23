@@ -95,6 +95,9 @@ void STOPWATCH_INCREMENT(int id);
 
 int Is_GSL_Vector_Equal(const gsl_vector* A, const gsl_vector* B);
 int Is_GSL_Matrix_Equal(const gsl_matrix* A, const gsl_matrix* B);
+noinline double GetIsEqualKnob();
+noinline double ResetIsEqualKnob();
+noinline double AdjustIsEqualKnob(int pwr10); // Multiply by 10^(pwr10)
 double Get_GSL_Matrix_RMSD(const gsl_matrix* A, const gsl_matrix*);
 double Get_GSL_Vector_RMSD(const gsl_vector* A, const gsl_vector*);
 int my_dgemv(CBLAS_TRANSPOSE_t Trans, double alpha, const gsl_matrix* A, const gsl_vector* X, double beta, gsl_vector* Y);
