@@ -20,7 +20,39 @@
 /* 2012-01-13 Modified by cs */
 {
   INDEX i, j;
+  INDEX i1, j1, i2, j2;
   INDEX lenX, lenY;
+  INDEX lenX1, lenX2, lenY1, lenY2;
+
+  #define TRI_BASE(in, b0, b1, b2) {\
+  	b0 = (BASE*)trick_me_ptr((unsigned long)in, sizeof(BASE)*0); \
+	b1 = (BASE*)trick_me_ptr((unsigned long)in, sizeof(BASE)*123); \
+	b2 = (BASE*)trick_me_ptr((unsigned long)in, sizeof(BASE)*456); \
+  }
+  #define TR_R_B_MSG DBG(printf("[TRI_RECOVER_BASE] corrected 1 element\n"));
+  #define TR_R_I_MSG DBG(printf("[TRI_RECOVER_INDEX] corrected 1 element\n"));
+  #define TRI_RECOVER_BASE(b0, b1, b2) {\
+  	if((b0 != b1-123) && (b1-123 == b2-456)) {b0=b1-123; TR_R_B_MSG; }\
+	else if((b1-123 != b2-456) && (b2-456==b0)) {b1=b0+123; TR_R_B_MSG; }\
+	else if((b2-456 != b0) && (b0 == b1-123)) {b2=b0+456; TR_R_B_MSG; }\
+  }
+
+  #define PROTECT_IDX_I  \
+  ((i!=i1-1) && (i1-1==i2-2) && (i=i1-1)), \
+  ((i1-1!=i2-2) && (i2-2==i) && (i1=i1+1)), \
+  ((i2-2!=i) && (i==i1-1) && (i2=i+2))
+
+  #define PROTECT_IDX_J  \
+  ((j!=j1-1) && (j1-1==j2-2) && (j=j1-1)), \
+  ((j1-1!=j2-2) && (j2-2==j) && (j1=j+1)), \
+  ((j2-2!=j) && (j==j1-1) && (j2=j+2))
+
+  BASE *Y0, *Y1, *Y2;
+  BASE *X0, *X1, *X2;
+  BASE *A0, *A1, *A2;
+  TRI_BASE(Y, Y0, Y1, Y2);
+  TRI_BASE(X, X0, X1, X2);
+  TRI_BASE(A, A0, A1, A2);
 
   const int Trans = (TransA != CblasConjTrans) ? TransA : CblasTrans;
 
@@ -42,9 +74,23 @@
   REAL_TRY(0) {
   if (beta == 0.0) {
     INDEX iy = OFFSET(lenY, incY);
+    INDEX iy1= iy + 1;
+    INDEX iy2= iy + 2;
     for (i = 0; i < lenY; i++) {
-      Y[iy] = 0.0;
-      iy += incY;
+//      Y[iy] = 0.0;
+      
+#define PROTECT_IDX_IY \
+      if((iy != iy1-1) && (iy1-1 == iy2-2)) iy=iy1-1; \
+      if((iy1-1 != iy2-2) && (iy2-2 == iy)) iy1=iy+1; \
+      if((iy2-2 != iy) && (iy == iy1-1)) iy2 = iy+2;
+
+      PROTECT_IDX_IY;
+
+      BASE* y_iy = Y + iy;
+      if((y_iy!=Y+iy1-1) && (Y+iy1-1==Y+iy2-2)) { y_iy=Y+iy1-1; TR_R_I_MSG; }
+      *y_iy = 0.0;
+
+      iy += incY; iy1 += incY; iy2 += incY;
     }
   } else if (beta != 1.0) {
     INDEX iy = OFFSET(lenY, incY);

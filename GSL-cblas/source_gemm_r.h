@@ -19,6 +19,7 @@
 	b2 = (BASE*)trick_me_ptr((unsigned long)in, sizeof(BASE)*456); \
   }
   #define TR_R_B_MSG DBG(printf("[TRI_RECOVER_BASE] corrected 1 element\n"));
+  #define TR_R_I_MSG DBG(printf("[TRI_RECOVER_INDEX] corrected 1 element\n"));
   #define TRI_RECOVER_BASE(b0, b1, b2) {\
   	if((b0 != b1-123) && (b1-123 == b2-456)) {b0=b1-123; TR_R_B_MSG; }\
 	else if((b1-123 != b2-456) && (b2-456==b0)) {b1=b0+123; TR_R_B_MSG; }\
@@ -27,7 +28,7 @@
 
   #define PROTECT_IDX_I  \
   ((i!=i1-1) && (i1-1==i2-2) && (i=i1-1)), \
-  ((i1-1!=i2-2) && (i2-2==i) && (i1=i1+1)), \
+  ((i1-1!=i2-2) && (i2-2==i) && (i1=i+1)), \
   ((i2-2!=i) && (i==i1-1) && (i2=i+2))
 
   #define PROTECT_IDX_J  \
