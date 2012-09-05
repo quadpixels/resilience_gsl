@@ -92,8 +92,8 @@
       	   PROTECT_IDX_J
       ) {
         C[ldc * i + j] = 0.0;
-	trick_blackhole(i1); trick_blackhole(i2);
-	trick_blackhole(j1); trick_blackhole(j2);
+//	trick_blackhole(i1); trick_blackhole(i2);
+//	trick_blackhole(j1); trick_blackhole(j2);
       }
     }
   } else if (beta != 1.0) {
@@ -102,8 +102,8 @@
     ) {
       for (j = 0; j < n2; j++) {
         C[ldc * i + j] *= beta;
-	trick_blackhole(i1); trick_blackhole(i2);
-	trick_blackhole(j1); trick_blackhole(j2);
+//	trick_blackhole(i1); trick_blackhole(i2);
+//	trick_blackhole(j1); trick_blackhole(j2);
       }
     }
   }
@@ -134,9 +134,9 @@
 	    BASE* c = C0 + idx;
 	    if((c != C1+idx-123) && (C1+idx-123 == C2+idx-456)) c=C1+idx-123;
             *c += temp * G[ldg * k + j];
-	    trick_blackhole(i1); trick_blackhole(i2);
-    	    trick_blackhole(j1); trick_blackhole(j2);
-	    trick_blackhole(k1); trick_blackhole(k2);
+//	    trick_blackhole(i1); trick_blackhole(i2);
+//    	    trick_blackhole(j1); trick_blackhole(j2);
+//	    trick_blackhole(k1); trick_blackhole(k2);
           }
         }
       }
@@ -186,8 +186,8 @@
 	BASE* c = C0 + idx;
 	if((c != C1+idx-123) && (C1+idx-123 == C2+idx-456)) c = C1 + idx - 123;
         (*c) += alpha * temp;
-	trick_blackhole(i1); trick_blackhole(i2);
-	trick_blackhole(j1); trick_blackhole(j2);
+//	trick_blackhole(i1); trick_blackhole(i2);
+//	trick_blackhole(j1); trick_blackhole(j2);
       }
     }
   } REAL_CATCH(4) {} REAL_END(4);
@@ -213,12 +213,12 @@
 	    BASE* c = C0 + idx;
 	    if((c != C1+idx-123) && (C1+idx-123 == C2+idx-456)) c = C1+idx-123;
             *c += temp * G[ldg * k + j];
-	    trick_blackhole(j1); trick_blackhole(j2);
+//	    trick_blackhole(j1); trick_blackhole(j2);
           }
         }
-	trick_blackhole(i1); trick_blackhole(i2);
+//	trick_blackhole(i1); trick_blackhole(i2);
       }
-      trick_blackhole(k1); trick_blackhole(k2);
+//      trick_blackhole(k1); trick_blackhole(k2);
     }
   } REAL_CATCH(5) {} REAL_END(5);
 
@@ -252,7 +252,7 @@
 	  if((f != F1+idx_f-123) && (F1+idx_f-123==F2+idx_f-456)) f=F1+idx_f-123;
 	  double d_f = *f;
 	  temp += d_g * d_f;
-	  trick_blackhole(k1); trick_blackhole(k2);
+//	  trick_blackhole(k1); trick_blackhole(k2);
         }
 	TRI_RECOVER_SIZE_T(ldc_, ldc0, ldc1, ldc2);
 	int idx = ldc*i+j;
@@ -261,9 +261,9 @@
 	BASE* c = C0+idx;
 	if((c != C1+idx-123) && (C1+idx-123 == C2+idx-456)) c = C1+idx-123;
         *c += alpha * temp;
-	trick_blackhole(j1); trick_blackhole(j2);
+//	trick_blackhole(j1); trick_blackhole(j2);
       }
-      trick_blackhole(i1); trick_blackhole(i2);
+//      trick_blackhole(i1); trick_blackhole(i2);
     }
   } REAL_CATCH(6) {} REAL_END(6);
 
@@ -271,6 +271,9 @@
     BLAS_ERROR("unrecognized operation");
   }
 
+  #undef PROTECT_IDX_I
+  #undef PROTECT_IDX_J
+  #undef PROTECT_IDX_K
   #undef TRI_BASE
   #undef TRI_RECOVER_BASE
   #undef TR_R_B_MSG
