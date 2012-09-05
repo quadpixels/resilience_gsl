@@ -86,7 +86,7 @@
     ix -= incX;
     ix1 = ix+1;
     ix2 = ix+2;
-    for (i = N - 1, i1=i+1, i2=i+2; i>=0; i--, i1--, i2--,
+    for (i = N - 2, i1=i+1, i2=i+2; i>=0; i--, i1--, i2--,
     	PROTECT_IDX_I
     	) {
 //      BASE tmp = X[ix];
@@ -247,7 +247,7 @@
     ix -= incX;
     ix1 = ix + 1;
     ix2 = ix + 2;
-    for (i=N-1, i1=i+1, i2=i+2; i >= 0; i--,
+    for (i=N-2, i1=i+1, i2=i+2; i >= 0; i--, i1--, i2--,
     	PROTECT_IDX_I
     	) {
 //    BASE tmp = X[ix];
