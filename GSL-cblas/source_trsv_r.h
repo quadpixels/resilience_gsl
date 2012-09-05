@@ -100,8 +100,8 @@
 	  TMP_ASSIGN_X_IX;
 
       jx = ix + incX;
-      jx1= jx + incX;
-      jx2= jx + incX;
+      jx1= jx + 1;
+      jx2= jx + 1;
       trick_blackhole(jx1); trick_blackhole(jx2);
       for (j = i + 1, j1=j+1, j2=j+2; j < N; j++, j1++, j2++,
       	  PROTECT_IDX_J
@@ -111,7 +111,7 @@
 #define X_JX_ASSIGN_X_JX \
         TRI_RECOVER_BASE(X0, X1, X2); \
         TRI_RECOVER(jx, jx1, jx2); \
-        BASE* p_x = X+jx; \
+        BASE* p_x = X0+jx; \
         if((p_x != X1+jx-123) && (X1+jx-123==X2+jx-456)) p_x = X1+jx-123; \
         BASE x_jx = *p_x;
         
