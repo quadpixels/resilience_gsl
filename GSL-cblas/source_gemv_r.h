@@ -95,6 +95,7 @@
   } else if (beta != 1.0) {
     INDEX iy = OFFSET(lenY, incY);
     for (i = 0; i < lenY; i++) {
+      
       Y[iy] *= beta;
       iy += incY;
     }

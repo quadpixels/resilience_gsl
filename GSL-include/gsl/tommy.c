@@ -1005,6 +1005,11 @@ void GSL_BLAS_DGEMV_FT3(CBLAS_TRANSPOSE_t Trans, double alpha,
 	unsigned long ema0, ema1, ema2, evx0, evx1, evx2, evy0, evy1, evy2;
 
 	DBG(printf("[DGEMV_FT3] 2. Encoding input\n"));
+
+	gsl_vector* vecY_bak = gsl_vector_alloc(vecY->size);
+	gsl_vector_memcpy(vecY_bak, vecY);
+	TRIPLICATE(vecY_bak, vecY0, vecY1, vecY2);
+
 	encode((matA->data), (matA->size1*matA->size2), &ecMatA); 
 	TRIPLICATE(ecMatA, ema0, ema1, ema2);
 	encode((vecX->data), (vecX->size), &ecVecX); 
@@ -1012,10 +1017,6 @@ void GSL_BLAS_DGEMV_FT3(CBLAS_TRANSPOSE_t Trans, double alpha,
 	encode((vecY->data), (vecY->size), &ecVecY); 
 	TRIPLICATE(ecVecY, evy0, evy1, evy2);
 	
-	gsl_vector* vecY_bak = gsl_vector_alloc(vecY->size);
-	gsl_vector_memcpy(vecY_bak, vecY);
-	TRIPLICATE(vecY_bak, vecY0, vecY1, vecY2);
-
 	nonEqualCount=0;
 	int jmpret, isEqual;
 	DBG(printf("[DGEMV_FT3] 3. Setjmp\n"));
