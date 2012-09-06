@@ -335,6 +335,7 @@ FTV_REAL_TRY(0) {
 	#else
 		for(i=0, i1=1, i2=2; i<nTiles; i++, i1++, i2++, PROTECT_IDX_I) {
 	#endif
+		printf("(%d/%d) ", i, nTiles);
 		int pStart = offsetIn + i*BLKSIZE, pEnd = pStart + BLKSIZE;
 		if(pEnd > offsetIn + lenIn) pEnd=offsetIn + lenIn;
 		/* 2.1 Column sums 
