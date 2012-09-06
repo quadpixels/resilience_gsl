@@ -158,6 +158,8 @@
       X[ix] = X[ix] / A[lda * 0 + 0];
     }
     ix += incX;
+    ix1 = ix+1;
+    ix2 = ix+2;
     for (i=1, i1=2, i2=3; i < N; i++, i1++, i2++,
     	PROTECT_IDX_I
     	) {
