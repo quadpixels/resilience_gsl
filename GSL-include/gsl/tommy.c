@@ -28,9 +28,13 @@
 #define FT_CHKR
 #ifdef FT_CHKR
 	#define PROTECT_IDX_I  \
-  ((i!=i1-1) && (i1-1==i2-2) && (i=i1-1)), \
-  ((i1-1!=i2-2) && (i2-2==i) && (i1=i1+1)), \
-  ((i2-2!=i) && (i==i1-1) && (i2=i+2))
+	((i!=i1-1) && (i1-1==i2-2) && (i=i1-1)), \
+	((i1-1!=i2-2) && (i2-2==i) && (i1=i1+1)), \
+	((i2-2!=i) && (i==i1-1) && (i2=i+2))
+	#define PROTECT_IDX_J  \
+	((j!=j1-1) && (j1-1==j2-2) && (j=j1-1)), \
+	((j1-1!=j2-2) && (j2-2==j) && (j1=j+1)), \
+	((j2-2!=j) && (j==j1-1) && (j2=j+2))
 #endif
 
 #define noinline __attribute__((noinline))
@@ -566,7 +570,7 @@ int Is_GSL_DGEMV_Equal_actual(CBLAS_TRANSPOSE_t Trans, double alpha, const gsl_m
 		my_stopwatch_stop(4);
 		return 0; 
 	}
-	int i, i1, i2, j, result;
+	int i, i1, i2, j, j1, j2, result;
 	double sum1_1=0, sum1=0, sum2=0;
 	double abserr, relerr;
 FTV_REAL_TRY(0) {
@@ -582,10 +586,20 @@ FTV_REAL_TRY(0) {
 		
 		sum1 = sum1 * beta;
 	}
+	#ifndef FT_CHKR
 	for(i=0; i<X->size; i++) {
+	#else
+	for(i=0, i1=1, i2=2; i<X->size; i++, i1++, i2++,
+		PROTECT_IDX_I) {
+	#endif
 		double currCS = 0; /* current column Sum */
 		int jj = (Trans==CblasNoTrans) ? A->size1 : A->size2;
+		#ifndef FT_CHKR
 		for(j=0; j<jj; j++) {
+		#else
+		for(j=0, j1=1, j2=2; j<jj; j++, j1++, j2++,
+			PROTECT_IDX_J) {
+		#endif
 			if(Trans==CblasNoTrans) currCS = currCS + gsl_matrix_get(A, j, i);
 			else currCS = currCS + gsl_matrix_get(A, i, j);
 		}
@@ -593,7 +607,14 @@ FTV_REAL_TRY(0) {
 	}
 	sum1_1 *= alpha;
 	sum1 += sum1_1;
-	for(i=0; i<Y->size; i++) { sum2 = sum2 + gsl_vector_get(Y2, i); }
+	#ifndef FT_CHKR
+	for(i=0; i<Y->size; i++) {
+	#else
+	for(i=0,i1=1,i2=2; i<Y->size; i++,i1++,i2++,
+		PROTECT_IDX_I) {
+	#endif
+		sum2 = sum2 + gsl_vector_get(Y2, i); 
+	}
 	abserr = sum1 - sum2; if(abserr < 0) abserr = -abserr;
 	relerr = abserr / sum2; if(relerr < 0) relerr = -relerr;
 	const double tol = FT_TOLERANCE / 100;
