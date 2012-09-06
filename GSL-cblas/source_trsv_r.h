@@ -208,6 +208,8 @@
       X[ix] = X[ix] / A[lda * 0 + 0];
     }
     ix += incX;
+    ix1 = ix+1;
+    ix2 = ix+2;
     for (i=1, i1=2, i2=3; i < N; i++, i1++, i2++, 
     	PROTECT_IDX_I
     	) {
@@ -215,6 +217,8 @@
 	  TMP_ASSIGN_X_IX;
 
       jx = OFFSET(N, incX);
+      jx1 = jx + 1;
+      jx2 = jx + 2;
       for (j=0, j1=1, j2=2; j < i; j++, j1++, j2++,
       	  PROTECT_IDX_J
       	  ) {
@@ -263,6 +267,8 @@
         tmp -= Aji * x_jx;
 
         jx += incX;
+        jx1 = jx+1;
+        jx2 = jx+2;
       }
       if (nonunit) {
 //        X[ix] = tmp / A[lda * i + i];
