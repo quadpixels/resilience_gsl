@@ -189,6 +189,7 @@ noinline
 unsigned int encode(const double* array, const int len, void** backup) {
 	poecc_num_encoded += len;
 	printf("[encode] array=%lx len=%d backup=%lx\n", (unsigned long)array, len, (unsigned long)backup);
+	int jmpret = 0;
 	SUPERSETJMP("Block ECC encode()");
 	
 	/* Profiling */
