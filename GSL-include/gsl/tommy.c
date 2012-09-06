@@ -573,7 +573,7 @@ int Is_GSL_DGEMV_Equal_actual(CBLAS_TRANSPOSE_t Trans, double alpha, const gsl_m
 	int i, i1, i2, j, j1, j2, result;
 	double sum1_1=0, sum1=0, sum2=0;
 	double abserr, relerr;
-//FTV_REAL_TRY(0) {
+FTV_REAL_TRY(0) {
 	if(beta!=0) {
 		#ifndef FT_CHKR
 		for(i=0; i<Y->size; i++) {
@@ -631,7 +631,7 @@ int Is_GSL_DGEMV_Equal_actual(CBLAS_TRANSPOSE_t Trans, double alpha, const gsl_m
 	else result = 1;
 	my_stopwatch_stop(4);
 	if(result==0) { DBG(printf("[Is_GSL_DGEMV_Equal] DGEMV not equal\n")); }
-//} FTV_REAL_CATCH(0) {} FTV_REAL_END(0);
+} FTV_REAL_CATCH(0) {} FTV_REAL_END(0);
 	return result;
 }
 
