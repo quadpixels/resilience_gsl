@@ -581,7 +581,8 @@ FTV_REAL_TRY(0) {
 		for(i=0, i1=1, i2=2; i<Y->size; i++, i1++, i2++,
 			PROTECT_IDX_I) {
 		#endif
-			sum1 = sum1 + gsl_vector_get(Y, i);
+//			sum1 = sum1 + gsl_vector_get(Y, i);
+			sum1 = sum1 + Y->data[i];
 		}
 		
 		sum1 = sum1 * beta;
@@ -600,10 +601,15 @@ FTV_REAL_TRY(0) {
 		for(j=0, j1=1, j2=2; j<jj; j++, j1++, j2++,
 			PROTECT_IDX_J) {
 		#endif
-			if(Trans==CblasNoTrans) currCS = currCS + gsl_matrix_get(A, j, i);
-			else currCS = currCS + gsl_matrix_get(A, i, j);
+			if(Trans==CblasNoTrans) { 
+				currCS = currCS + A->data[j*A->tda+i];
+				//gsl_matrix_get(A, j, i);
+			} else {
+				currCS = currCS + A->data[i*A->tda+j]; 
+				//gsl_matrix_get(A, i, j);
+			}
 		}
-		sum1_1 = sum1_1 + currCS * gsl_vector_get(X, i);
+		sum1_1 = sum1_1 + currCS * X->data[i];//gsl_vector_get(X, i);
 	}
 	sum1_1 *= alpha;
 	sum1 += sum1_1;
@@ -613,7 +619,7 @@ FTV_REAL_TRY(0) {
 	for(i=0,i1=1,i2=2; i<Y->size; i++,i1++,i2++,
 		PROTECT_IDX_I) {
 	#endif
-		sum2 = sum2 + gsl_vector_get(Y2, i); 
+		sum2 = sum2 + Y2->data[i];//gsl_vector_get(Y2, i); 
 	}
 	abserr = sum1 - sum2; if(abserr < 0) abserr = -abserr;
 	relerr = abserr / sum2; if(relerr < 0) relerr = -relerr;
