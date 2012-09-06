@@ -240,6 +240,8 @@
         X[ix] = tmp;
       }
       ix += incX;
+      ix1 = ix+1;
+      ix2 = ix+2;
     }
   } REAL_CATCH(2) {} REAL_END(2);
   } else if ((order == CblasRowMajor && Trans == CblasTrans && Uplo == CblasLower)
