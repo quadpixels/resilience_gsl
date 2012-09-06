@@ -24,6 +24,15 @@
 	#define FTV_REAL_END(label) ;
 #endif
 
+// Added on Sep 06
+#define FT_CHKR
+#ifdef FT_CHKR
+	#define PROTECT_IDX_I  \
+  ((i!=i1-1) && (i1-1==i2-2) && (i=i1-1)), \
+  ((i1-1!=i2-2) && (i2-2==i) && (i1=i1+1)), \
+  ((i2-2!=i) && (i==i1-1) && (i2=i+2))
+#endif
+
 #define noinline __attribute__((noinline))
 
 int nonEqualCount = 0;
@@ -36,14 +45,14 @@ noinline
 double my_sum_vector_actual(const gsl_vector* v) {
 	double ret = 0;
 	DBG(printf("[my_sum_vector] v=%lx, size=%ld, stride=%ld\n", (unsigned long)v, v->size, v->stride));
-	#define PROTECT_IDX_I  \
-  ((i!=i1-1) && (i1-1==i2-2) && (i=i1-1)), \
-  ((i1-1!=i2-2) && (i2-2==i) && (i1=i1+1)), \
-  ((i2-2!=i) && (i==i1-1) && (i2=i+2))
 	FTV_REAL_TRY(0) {
+		#ifdef FT_CHKR
 		int i, i1, i2; for(i=0; i<v->size; i++, i1++, i2++,
 			PROTECT_IDX_I
 			) {
+		#else
+		int i; for(i=0; i<v->size; i++) {
+		#endif
 			// The same as my_sum_matrix_actual; the GSL's routine may not
 			// play well here....
 //			ret = ret + gsl_vector_get(v, i);
@@ -557,12 +566,20 @@ int Is_GSL_DGEMV_Equal_actual(CBLAS_TRANSPOSE_t Trans, double alpha, const gsl_m
 		my_stopwatch_stop(4);
 		return 0; 
 	}
-	int i, j, result;
+	int i, i1, i2, j, result;
 	double sum1_1=0, sum1=0, sum2=0;
 	double abserr, relerr;
 FTV_REAL_TRY(0) {
 	if(beta!=0) {
-		for(i=0; i<Y->size; i++) sum1 = sum1 + gsl_vector_get(Y, i);
+		#ifndef FT_CHKR
+		for(i=0; i<Y->size; i++) {
+		#else
+		for(i=0, i1=1, i2=2; i<Y->size; i++, i1++, i2++,
+			PROTECT_IDX_I) {
+		#endif
+			sum1 = sum1 + gsl_vector_get(Y, i);
+		}
+		
 		sum1 = sum1 * beta;
 	}
 	for(i=0; i<X->size; i++) {
