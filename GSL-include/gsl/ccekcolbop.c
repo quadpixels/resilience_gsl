@@ -166,6 +166,7 @@ FTV_REAL_TRY(0) {
 noinline
 unsigned int encode(const double* array, const int len, void** backup) {
 	poecc_num_encoded += len;
+	printf("[encode] array=%lx len=%d backup=%lx\n", (unsigned long)array, len, (unsigned long)backup);
 FTV_REAL_TRY(0) {
 	/* Profiling */
 	#ifdef TOMMY_H
