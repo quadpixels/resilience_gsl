@@ -86,18 +86,29 @@
 
       PROTECT_IDX_IY;
 
-      BASE* y_iy = Y + iy;
+#define FETCH_Y_IY \
+      BASE* y_iy = Y + iy; \
       if((y_iy!=Y+iy1-1) && (Y+iy1-1==Y+iy2-2)) { y_iy=Y+iy1-1; TR_R_I_MSG; }
+      
+      FETCH_Y_IY;
       *y_iy = 0.0;
 
-      iy += incY; iy1 += incY; iy2 += incY;
+      iy += incY;
+      iy1 = iy+1;
+      iy2 = iy+2;
     }
   } else if (beta != 1.0) {
     INDEX iy = OFFSET(lenY, incY);
+    INDEX iy1 = iy+1, iy2 = iy+2;
     for (i = 0; i < lenY; i++) {
+//    Y[iy] *= beta;
+	  PROTECT_IDX_IY;
+      FETCH_Y_IY;
+      (*y_iy) *= beta;
       
-      Y[iy] *= beta;
       iy += incY;
+      iy1 = iy + 1;
+      iy2 = iy + 2;
     }
   }
   } REAL_CATCH(0) {} REAL_END(0);

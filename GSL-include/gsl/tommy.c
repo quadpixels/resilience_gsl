@@ -36,9 +36,18 @@ noinline
 double my_sum_vector_actual(const gsl_vector* v) {
 	double ret = 0;
 	DBG(printf("[my_sum_vector] v=%lx, size=%ld, stride=%ld\n", (unsigned long)v, v->size, v->stride));
+	#define PROTECT_IDX_I  \
+  ((i!=i1-1) && (i1-1==i2-2) && (i=i1-1)), \
+  ((i1-1!=i2-2) && (i2-2==i) && (i1=i1+1)), \
+  ((i2-2!=i) && (i==i1-1) && (i2=i+2))
 	FTV_REAL_TRY(0) {
-		int i; for(i=0; i<v->size; i++) {
-			ret = ret + gsl_vector_get(v, i);
+		int i, i1, i2; for(i=0; i<v->size; i++, i1++, i2++,
+			PROTECT_IDX_I
+			) {
+			// The same as my_sum_matrix_actual; the GSL's routine may not
+			// play well here....
+//			ret = ret + gsl_vector_get(v, i);
+			ret = ret + v->data[v->stride * i];
 		}
 	} FTV_REAL_CATCH(0) {} FTV_REAL_END(0); 
 	return ret;
@@ -1394,5 +1403,7 @@ noinline double AdjustIsEqualKnob(int pwr10) {
 	}
 	DBG(printf("[AdjustIsEqualKnob] Knob adjusted to %g\n", is_equal_knob));
 }
+
+#undef PROTECT_IDX_I
 
 #endif
