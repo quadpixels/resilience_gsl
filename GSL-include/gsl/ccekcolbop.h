@@ -27,14 +27,6 @@ extern "C" {
  * when ECC ECC is 1. */
 //#define TAMPER_WITH_ECC_ITSELF
 
-#ifndef DBG
-#ifdef DEBUG
-#define DBG(call) {call;}
-#else
-#define DBG(call) {}
-#endif
-#endif
-
 #define print_array(array, description, size) { \
         int printlimit = size; \
 	if(printlimit > 100) printlimit=100;\

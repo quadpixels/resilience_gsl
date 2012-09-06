@@ -1,6 +1,9 @@
 #include "ccekcolbop.h"
 #include "real.h"
+#include "tommy.h"
 #include "triplicate.h"
+#include <sys/signal.h>
+#include <signal.h>
 
 #define FT_ROUTINES_VULN
 #ifdef FT_ROUTINES_VULN
@@ -19,12 +22,31 @@
 	#define FTV_REAL_END(label) ;
 #endif
 
-// When fault rate is below 1e-05, we must enforce fault tolerance mechanisms on the encoding library
+// When fault rate is above 1e-05, we must enforce fault tolerance mechanisms on the encoding library
 #define FT_ENCODE
 #ifdef FT_ENCODE
-	#define FTE(call) {call;}
+	#define PROTECT_IDX_I  \
+	((i!=i1-1) && (i1-1==i2-2) && (i=i1-1)), \
+	((i1-1!=i2-2) && (i2-2==i) && (i1=i+1)), \
+	((i2-2!=i) && (i==i1-1) && (i2=i+2))
+	#define PROTECT_IDX_COLID_COLSTART \
+	((colId!=colId1-1) && (colId1-1==colId2-2) && (colId=colId1-1)), \
+	((colId1-1!=colId2-2) && (colId2-2==colId) && (colId1=colId+1)), \
+	((colId2-2!=colId) && (colId==colId1-1) && (colId2=colId+2))
+	#define PROTECT_IDX_P_COL_START \
+	((pColStart!=pColStart1-1) && (pColStart1-1==pColStart2-2) && (pColStart=pColStart1-1)), \
+	((pColStart1-1!=pColStart2-2) && (pColStart2-2==pColStart) && (pColStart1=pColStart+1)), \
+	((pColStart2-2!=pColStart) && (pColStart==pColStart1-1) && (pColStart2=pColStart+2))
 #else
-	#define FTE(call) {}
+#endif
+
+// Debug outputs
+#ifndef DBG
+#ifdef DEBUG
+#define DBG(call) {call;}
+#else
+#define DBG(call) {}
+#endif
 #endif
 
 long poecc_num_encoded = 0;
@@ -167,11 +189,14 @@ noinline
 unsigned int encode(const double* array, const int len, void** backup) {
 	poecc_num_encoded += len;
 	printf("[encode] array=%lx len=%d backup=%lx\n", (unsigned long)array, len, (unsigned long)backup);
-FTV_REAL_TRY(0) {
+	SUPERSETJMP("Block ECC encode()");
+	
 	/* Profiling */
 	#ifdef TOMMY_H
 	my_stopwatch_checkpoint(8);
 	#endif
+	
+FTV_REAL_TRY(0) {
 	/* 1. Some preparations. */
 	const int nTiles = ((len-1) / BLKSIZE) + 1;
 	const int eccSize = ((nTiles*BLK_LEN*2) + nTiles + 1);
@@ -181,9 +206,18 @@ FTV_REAL_TRY(0) {
 
 	/* 2. Allocating space */
 	double* ret = (double*)malloc(sizeof(double) * retSize);
+	#ifdef FT_ENCODE
+		unsigned long ret0, ret1, ret2;
+		TRIPLICATE(ret, ret0, ret1, ret2);
+		printf("[encode] Triplicated ret\n");
+	#endif
 	
 	/* 3. Calculate the ECC of the input array and the ECC of the ECC. */
 	do_encode(array, 0, len, ret, 0);
+#ifdef FT_ENCODE
+		TRI_RECOVER(ret0, ret1, ret2);
+		if(ret != (double*)ret0) ret = (double*)ret0;
+#endif
 	if(ECCECC>0) do_encode(ret, 0, eccSize, ret, eccSize); // Hierarchical ECC
 #ifdef DEBUG_REF
 	double* ret2 = (double*)malloc(sizeof(double) * retSize);
@@ -285,17 +319,35 @@ void do_encode(const double* in, const int offsetIn, const int lenIn, double* ou
 FTV_REAL_TRY(0) {
 	/* 1. Some preparations. */
 	int i, rowId, colId, j, k, pRowStart, pColStart, p; /* Pointer to array */
+	#ifdef FT_ENCODE
+		int i1, i2, j1, j2, k1, k2;
+		int colId1, colId2, pColStart1, pColStart2;
+		unsigned long out0, out1, out2;
+		TRIPLICATE(out, out0, out1, out2);
+	#endif
 	int pCSum, pRSum, pTileSum, pGrandTotal; /* Pointer to ECC code */
 	double colSum, rowSum, tileSum, grandTotal=0; /* I think we should avoid segfaults by using as few mallocs as possible. */
 	const int nTiles = ((lenIn-1) / BLKSIZE) + 1;
 
-	for(i=0; i<nTiles; i++) {
+	#ifndef FT_ENCODE
+		for(i=0; i<nTiles; i++) {
+	#else
+		for(i=0, i1=1, i2=2; i<nTiles; i++, i1++, i2++, PROTECT_IDX_I) {
+	#endif
 		int pStart = offsetIn + i*BLKSIZE, pEnd = pStart + BLKSIZE;
 		if(pEnd > offsetIn + lenIn) pEnd=offsetIn + lenIn;
 		/* 2.1 Column sums 
 		 * We use row major here, so a[1,2,3,4,5] is a row,
 		 * a[1,6,11,16,21] is a column. */
+		#ifndef FT_ENCODExx
 		for(colId=0, pColStart = pStart+colId; (colId<BLK_LEN && pColStart<pEnd); colId++, pColStart++) {
+		#else
+		for(colId=0, colId1=1, colId2=2,
+			pColStart=pStart+colId, pColStart=pColStart+1,	pColStart2=pColStart+2;
+			(colId<BLK_LEN && pColStart<pEnd);
+			colId++, colId1++, colId2++, pColStart++, pColStart1++, pColStart2++,
+			PROTECT_IDX_COLID_COLSTART) {
+		#endif
 			colSum = 0;
 			pCSum = offsetOut + i*(BLK_LEN*2 + 1) + colId + BLK_LEN;
 			/* Each element in the column. If there is no element due to being out of bounds then
@@ -320,6 +372,7 @@ FTV_REAL_TRY(0) {
 		grandTotal += tileSum;
 		tileSum = 0;
 	}
+	
 	/* 3. The grand total */
 	pGrandTotal = offsetOut + nTiles*(BLK_LEN*2+1);
 	out[pGrandTotal] = grandTotal;
@@ -383,3 +436,5 @@ void POECC_SUMMARY() {
 	printf(">> Elems encoded: %d\n", poecc_num_encoded);
 	printf(">> Elems corrected: %d\n", poecc_num_corrected);
 }
+
+#undef DBG
