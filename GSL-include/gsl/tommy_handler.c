@@ -10,7 +10,7 @@ jmp_buf buf, buf_1, buf_2;
 
 int _count = 0;
 int _countmax = 20;
-extern int num_total_retries;
+int num_total_retries = 0;
 
 noinline
 unsigned int GetJmpBufChecksum(jmp_buf* buf) {

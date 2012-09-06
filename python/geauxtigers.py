@@ -63,4 +63,4 @@ re_sig_summary = "\[MySigsegvHandler\].*"
 re_fir = r">> FastLowPassFir correct \((?P<fir_correct>[0-9]+)/(?P<fir_incorrect>[0-9]+)/(?P<fir_total>[0-9]+)/(?P<fir_recalc>[0-9]+)\).*";
 re_fftrecalc = r">> FFT recalculation: (?P<fft_recalc>[0-9]+).*";
 re_pass4 = r">> Pass 4 recalculation: (?P<pass4_recalc>[0-9]+).*";
-re_stopwatch = r"\[my_stopwatch_show #(?P<sw_id>[0-9]+)\] (?P<microsec>[0-9]+) microseconds.*";
+re_stopwatch = r"\[my_stopwatch_show #(?P<sw_id>[0-9]+)\] (?P<microsec>[0-9]+) microseconds \((?P<desc>.*)\)\.";

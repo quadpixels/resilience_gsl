@@ -27,7 +27,8 @@
 #define noinline __attribute__((noinline))
 
 int nonEqualCount = 0;
-int num_total_retries = 0;
+// int num_total_retries = 0; // Moved to tommy_handler.c
+extern int num_total_retries;
 double is_equal_knob = FT_TOLERANCE;
 void check_nan(double x, char* k) { if(/*isnan(x)*/x!=x) { printf("%s is nan\n", k); }}
 
