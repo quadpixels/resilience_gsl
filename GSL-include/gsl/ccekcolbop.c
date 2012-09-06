@@ -19,6 +19,14 @@
 	#define FTV_REAL_END(label) ;
 #endif
 
+// When fault rate is below 1e-05, we must enforce fault tolerance mechanisms on the encoding library
+#define FT_ENCODE
+#ifdef FT_ENCODE
+	#define FTE(call) {call;}
+#else
+	#define FTE(call) {}
+#endif
+
 long poecc_num_encoded = 0;
 long poecc_num_corrected = 0;
 
@@ -272,6 +280,7 @@ void do_encode_2(const double* in, const int offsetIn, const int lenIn, double* 
 /* Do encoding of array in[offset:len], store it into out */
 noinline
 void do_encode(const double* in, const int offsetIn, const int lenIn, double* out, const int offsetOut) {
+
 FTV_REAL_TRY(0) {
 	/* 1. Some preparations. */
 	int i, rowId, colId, j, k, pRowStart, pColStart, p; /* Pointer to array */

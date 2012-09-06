@@ -1184,23 +1184,78 @@ void GSL_BLAS_DTRSV_FT3(CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t TransA,
 			CBLAS_DIAG_t Diag, const gsl_matrix* A, 
 			gsl_vector* X)
 {
+	/* Protect pointers to A and X */
+	unsigned long matA_0, matA_1, matA_2,  // A
+	              vecX_0, vecX_1, vecX_2,  // X
+				  vecXb_0,vecXb_1,vecXb_2; // X_bak
+	TRIPLICATE(A, matA_0, matA_1, matA_2);
+	TRIPLICATE(X, vecX_0, vecX_1, vecX_2);
+
+	/* Protect the tda, size1, size2, tda of A,
+	   stride and size of X */
+	size_t mas10, mas11, mas12, mas20, mas21, mas22, matda0, matda1, matda2; // A
+	size_t vxst0, vxst1, vxst2, vxs0, vxs1, vxs2;                            // X
+	size_t vxbst0, vxbst1, vxbst2, vxbs0, vxbs1, vxbs2;                      // X_bak
+	TRIPLICATE_SIZE_T(A->size1, mas10, mas11, mas12);   // A
+	TRIPLICATE_SIZE_T(A->size2, mas20, mas21, mas22);   // A
+	TRIPLICATE_SIZE_T(A->tda,  matda0, matda1, matda2); // A
+	TRIPLICATE_SIZE_T(X->size, vxs0, vxs1, vxs2);       // X
+	TRIPLICATE_SIZE_T(X->stride, vxst0, vxst1, vxst2);  // X
+	
 	double sumA, sumX;
 	sumA=my_sum_matrix(A); sumX=my_sum_vector(X); 
 	void *ecMatA, *ecVecX;
+	/* Protect pointers to ECC codes */
+	unsigned long ema0, ema1, ema2, evx0, evx1, evx2;
 	nonEqualCount=0;
 	MY_SET_SIGSEGV_HANDLER();
 	encode(A->data, (A->size1*A->size2), &ecMatA); 
-	encode(X->data, (X->size), &ecVecX); 
+	TRIPLICATE(ecMatA, ema0, ema1, ema2); // A
+
+	gsl_vector* X_bak = gsl_vector_alloc(X->size);
+	TRIPLICATE(X_bak, vecXb_0, vecXb_1, vecXb_2); // X_bak
+	TRIPLICATE(X_bak->size, vxbs0, vxbs1, vxbs2); // X_bak
+	TRIPLICATE(X_bak->stride, vxbst0, vxbst1, vxbst2); // X_bak
+	encode(X_bak->data, (X_bak->size), &ecVecX); 
+	TRIPLICATE(ecVecX, evx0, evx1, evx2); // X
+	gsl_vector_memcpy(X_bak, X);
+	
+	DBG(printf("[DTRSV_FT3] ECC Code Addr: A=%lx, X=%lx\n", (unsigned long)ecMatA,
+		(unsigned long)ecVecX));
 	int jmpret=0, isEqual;
-	jmpret = sigsetjmp(buf, 1);
+	SUPERSETJMP("After encoding");
 	if(jmpret != 0) {
 		kk: 
 		DBG(printf("[DTRSV_FT]Recovering matrix and vector from file\n"));
-		MY_MAT_CHK_RECOVER_POECC(sumA, ecMatA, (gsl_matrix*)A);
-		MY_VEC_CHK_RECOVER_POECC(sumX, ecVecX, (gsl_vector*)X);
+		{ // Recover input data A
+			TRI_RECOVER(matA_0, matA_1, matA_2);
+			size_t *mas1 = &(((gsl_matrix*)A)->size1),
+			       *mas2 = &(((gsl_matrix*)A)->size2), 
+				   *matda = &(((gsl_matrix*)A)->tda);
+			TRI_RECOVER_SIZE_T((*mas1), mas10, mas11, mas12);
+			TRI_RECOVER_SIZE_T((*mas2), mas20, mas21, mas22);
+			TRI_RECOVER_SIZE_T((*matda),matda0,matda1,matda2);
+			TRI_RECOVER(ema0, ema1, ema2);
+			if((unsigned long)ecMatA != ema0) ecMatA=(void*)ema0;
+			MY_MAT_CHK_RECOVER_POECC(sumA, ecMatA, (gsl_matrix*)matA_0);
+		}
+		{ // Recover input data X's backup
+			TRI_RECOVER(vecXb_0, vecXb_1, vecXb_2);
+			size_t *vxbs = &(X_bak->size), *vxbst = &(X_bak->stride);
+			TRI_RECOVER_SIZE_T((*vxbs), vxbs0, vxbs1, vxbs2);
+			TRI_RECOVER_SIZE_T((*vxbst),vxbst0,vxbst1,vxbst2);
+			TRI_RECOVER(evx0, evx1, evx2);
+			if((unsigned long)ecVecX != evx0) ecVecX=(void*)evx0;
+			MY_VEC_CHK_RECOVER_POECC(sumX, ecVecX, (gsl_vector*)X_bak);
+		}
+		{ // Copying back from X_bak to X
+			TRI_RECOVER(vecX_0, vecX_1, vecX_2);
+			size_t *vxs = &(X->size), *vxst = &(X->stride);
+			TRI_RECOVER_SIZE_T((*vxs), vxs0, vxs1, vxs2);
+			TRI_RECOVER_SIZE_T((*vxst), vxst0, vxst1, vxst2);
+			gsl_vector_memcpy(X, X_bak);
+		}
 	}
-	gsl_vector* X_bak = gsl_vector_alloc(X->size);
-	gsl_vector_memcpy(X_bak, X);
 	DBG(printf("[DTRSV_FT]Normal call to dsyrk.. nonEqualCount=%d\n", nonEqualCount));
 	SW3START; 
 	int ret = gsl_blas_dtrsv(uplo, TransA, Diag, A, X);
