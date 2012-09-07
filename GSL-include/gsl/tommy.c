@@ -48,7 +48,8 @@ void check_nan(double x, char* k) { if(/*isnan(x)*/x!=x) { printf("%s is nan\n",
 noinline
 double my_sum_vector_actual(const gsl_vector* v) {
 	double ret = 0;
-	DBG(printf("[my_sum_vector] v=%lx, size=%ld, stride=%ld\n", (unsigned long)v, v->size, v->stride));
+	DBG(printf("[my_sum_vector] v=%lx, v->data=%lx, size=%ld, stride=%ld\n", 
+		(unsigned long)v, v->data, v->size, v->stride));
 	FTV_REAL_TRY(0) {
 		#ifdef FT_CHKR
 		int i, i1, i2; for(i=0; i<v->size; i++, i1++, i2++,
