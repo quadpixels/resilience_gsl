@@ -35,9 +35,9 @@ noinline unsigned int GetMatrixChecksum(const gsl_matrix*);
 	r2 = trick_me_ptr((unsigned long)in, 456);
 
 #define TRI_RECOVER(r0, r1, r2) { \
-	if((r0 != r1-123) && (r1-123 == r2-456)) { r0 = r1-123; printf("[TRI_RECOVER] Corrected 1 element\n");} \
-	else if((r0 != r1-123) && (r0 == r2-456)) { r1 = r0+123; printf("[TRI_RECOVER] Corrected 1 element\n");} \
-	else if((r0 != r2-456) && (r0 == r1-123)) { r2 = r0+456; printf("[TRI_RECOVER] Corrected 1 element\n");} \
+	if((r0 != r1-123) && (r1-123 == r2-456)) { r0 = r1-123; DBG(printf("[TRI_RECOVER] Corrected 1 element\n"));} \
+	else if((r0 != r1-123) && (r0 == r2-456)) { r1 = r0+123; DBG(printf("[TRI_RECOVER] Corrected 1 element\n"));} \
+	else if((r0 != r2-456) && (r0 == r1-123)) { r2 = r0+456; DBG(printf("[TRI_RECOVER] Corrected 1 element\n"));} \
 }
 
 #endif

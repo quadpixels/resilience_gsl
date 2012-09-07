@@ -58,7 +58,7 @@ double my_sum_vector_actual(const gsl_vector* v) {
 		#else
 		int i; for(i=0; i<v->size; i++) {
 		#endif
-			printf("i=%d ", i);
+			DBG(printf("i=%d ", i));
 			// The same as my_sum_matrix_actual; the GSL's routine may not
 			// play well here....
 //			ret = ret + gsl_vector_get(v, i);
@@ -114,9 +114,9 @@ int my_dgemm_actual(CBLAS_TRANSPOSE_t TransA, CBLAS_TRANSPOSE_t TransB, double a
 	FTV_REAL_TRY(0) {
 		szC1 = C->size1; szC2 = C->size2;
 	} FTV_REAL_CATCH(0) {} FTV_REAL_END(0);
-		if(szA2!=szB1) { printf("[my_dgemm] Error: A's column count != B's row count.\n"); return -1; }
-		if(szA1!=szC1) { printf("[my_dgemm] Error: A's row count != C's row count.\n");    return -1; }
-		if(szB2!=szC2) { printf("[my_dgemm] Error: B's column count != C's column count.\n"); return -1; }
+		if(szA2!=szB1) { DBG(printf("[my_dgemm] Error: A's column count != B's row count.\n")); return -1; }
+		if(szA1!=szC1) { DBG(printf("[my_dgemm] Error: A's row count != C's row count.\n"));    return -1; }
+		if(szB2!=szC2) { DBG(printf("[my_dgemm] Error: B's column count != C's column count.\n")); return -1; }
 		m=szA1; n=szA2; p=szB2;
 		double temp, elemA, elemB;
 		for(i=0; i<m; i++) {
@@ -148,12 +148,12 @@ noinline
 int my_dgemv_actual(CBLAS_TRANSPOSE_t Trans, double alpha, const gsl_matrix* A, const gsl_vector* X, double beta, gsl_vector* Y) {
 		if(Trans==CblasNoTrans) {
 			DBG(printf("A=(%lu x %lu), X=(%lu x 1), Y=(%lu x 1)\n", A->size1, A->size2, X->size, Y->size));
-			if(A->size2 != X->size) { printf("my_dgemv: A's width is not equal to X's length.\n"); return -1; }
-			if(A->size1 != Y->size) { printf("my_dgemv: A's height is not equal to Y's length.\n"); return -1; }
+			if(A->size2 != X->size) { DBG(printf("my_dgemv: A's width is not equal to X's length.\n")); return -1; }
+			if(A->size1 != Y->size) { DBG(printf("my_dgemv: A's height is not equal to Y's length.\n")); return -1; }
 		} else if(Trans==CblasTrans) {
 			DBG(printf("A=(%lu x %lu), X=(%lu x 1), Y=(%lu x 1)\n", A->size1, A->size2, X->size, Y->size));
-			if(A->size1 != X->size) { printf("my_dgemv: A_transposed's width is not equal to X's length.\n"); return -1; }
-			if(A->size2 != Y->size) { printf("my_dgemv; A_transposed's height is not equal to Y's length.\n"); return -1; }
+			if(A->size1 != X->size) { DBG(printf("my_dgemv: A_transposed's width is not equal to X's length.\n")); return -1; }
+			if(A->size2 != Y->size) { DBG(printf("my_dgemv; A_transposed's height is not equal to Y's length.\n")); return -1; }
 		}
 		int i,j;
 		double tmp=0.0, elemA, elemX, elemY;
@@ -186,12 +186,12 @@ int my_dgemv(CBLAS_TRANSPOSE_t Trans, double alpha, const gsl_matrix* A, const g
 
 noinline 
 int my_dgemv_upperlower_actual(CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t Trans, double alpha, const gsl_matrix* A, const gsl_vector* X, double beta, gsl_vector* Y) {
-	if(A->size1 != A->size2) { printf("my_dgemv_upperlower: A is not square!\n"); return -1; }
+	if(A->size1 != A->size2) { DBG(printf("my_dgemv_upperlower: A is not square!\n")); return -1; }
 	if(Trans==CblasNoTrans) {
-		if(A->size2 != X->size) { printf("my_dgemv: A's width is not equal to X's length.\n"); return -1; }
-		if(A->size1 != Y->size) { printf("my_dgemv: A's height is not equal to Y's length.\n"); return -1; } } else if(Trans==CblasTrans) {
-		if(A->size1 != X->size) { printf("my_dgemv: A_transposed's width is not equal to X's length.\n"); return -1; }
-		if(A->size2 != Y->size) { printf("my_dgemv; A_transposed's height is not equal to Y's length.\n"); return -1; }
+		if(A->size2 != X->size) { DBG(printf("my_dgemv: A's width is not equal to X's length.\n")); return -1; }
+		if(A->size1 != Y->size) { DBG(printf("my_dgemv: A's height is not equal to Y's length.\n")); return -1; } } else if(Trans==CblasTrans) {
+		if(A->size1 != X->size) { DBG(printf("my_dgemv: A_transposed's width is not equal to X's length.\n")); return -1; }
+		if(A->size2 != Y->size) { DBG(printf("my_dgemv; A_transposed's height is not equal to Y's length.\n")); return -1; }
 	}
 	int i,j;
 	double tmp=0, tmp1;
@@ -228,11 +228,11 @@ void my_remove_SIGSEGV_handler() {
 	sigemptyset(&sa.sa_mask);
 	sigaction(SIGSEGV, &sa, NULL);
 	sigaction(SIGBUS,  &sa, NULL);
-	printf(" >> Unsetted.\n");
+	DBG(printf(" >> Unsetted.\n"));
 }
 
 void my_set_SIGSEGV_handler(void) {
-	printf(" >> My SIGSEGV Handler 1 - rerun routine engaged!\n");
+	DBG(printf(" >> My SIGSEGV Handler 1 - rerun routine engaged!\n"));
 	struct sigaction sa;
 	memset(&sa, 0, sizeof(struct sigaction));
 	sa.sa_handler = my_action;
@@ -264,7 +264,7 @@ void my_copy_double_to_matrix(double* arr, gsl_matrix* M) {
 
 void Print_Matrix(CBLAS_TRANSPOSE_t Trans, const gsl_matrix* M, const char* info) {
 	int i,j;
-	printf("Print_Matrix");
+	DBG(printf("Print_Matrix"));
 	if(Trans==CblasNoTrans) { printf(">> Matrix [%s] (%d x %d)\n", info, (int)M->size1, (int)M->size2); 
 		for(i=0; i<M->size1; i++) {
 			for(j=0; j<M->size2; j++) { printf("%g ", gsl_matrix_get(M, i, j)); }
@@ -423,8 +423,8 @@ FTV_REAL_TRY(0) {
 	gsl_vector_free(ABr);
 	gsl_vector_free(r);
 	my_stopwatch_stop(4);
-	if(result==0) printf("## DGEMM not equal\n");
-	else printf("[Is_GSL_MM_Equal] DGEMM is equal.\n");
+	if(result==0) { DBG(printf("## DGEMM not equal\n")); }
+	else { DBG(printf("[Is_GSL_MM_Equal] DGEMM is equal.\n")); }
 } FTV_REAL_CATCH(0) {} FTV_REAL_END(0);
 	return result;
 }

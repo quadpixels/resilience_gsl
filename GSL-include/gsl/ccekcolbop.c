@@ -164,8 +164,8 @@ FTV_REAL_TRY(0) {
 noinline
 unsigned int decode(double* patient, const int lenPatient, const double* doc) {
 unsigned int failed_corr = 0;
-	printf("[decode] patient=%lx lenPatient=%d doc=%lx\n", (unsigned long)patient,
-		lenPatient, (unsigned long)doc);
+	DBG(printf("[decode] patient=%lx lenPatient=%d doc=%lx\n", (unsigned long)patient,
+		lenPatient, (unsigned long)doc));
 	int jmpret = 0;
 	SUPERSETJMP("Block ECC decode()");
 	
@@ -455,7 +455,7 @@ int main(int argc, char** argv) {
 	for(i=0; i<sz; i++) if(arrayGold[i]==array[i])same++;
 
 //	print_array(array, "Recovered Input", sz);
-	printf(">> After correction, %d/%d elements were identical (recovered %d).\n", same, sz, pct-sz+same);
+	DBG(printf(">> After correction, %d/%d elements were identical (recovered %d).\n", same, sz, pct-sz+same));
 
 	return 0;
 }
