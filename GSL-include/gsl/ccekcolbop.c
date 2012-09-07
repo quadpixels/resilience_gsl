@@ -358,7 +358,7 @@ FTV_REAL_TRY(0) {
 		/* 2.1 Column sums 
 		 * We use row major here, so a[1,2,3,4,5] is a row,
 		 * a[1,6,11,16,21] is a column. */
-		#ifndef FT_ENCODExx
+		#ifndef FT_ENCODE
 		for(colId=0, pColStart = pStart+colId; (colId<BLK_LEN && pColStart<pEnd); colId++, pColStart++) {
 		#else
 		for(colId=0, colId1=1, colId2=2,
