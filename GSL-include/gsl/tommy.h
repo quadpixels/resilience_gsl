@@ -1,8 +1,12 @@
-// Branch 20120817
-// Does not go home in a tank
+// For branch "master"
+
 #pragma once
 #ifndef TOMMY_H
 #define TOMMY_H
+
+// 2012-08-18: Added a branch "master". May merge some time.
+#define GO_HOME_IN_A_TANK
+
 #define forceinline __inline__ __attribute__((always_inline))
 #define noinline __attribute__((noinline))
 #include <execinfo.h>
@@ -91,6 +95,9 @@ void STOPWATCH_INCREMENT(int id);
 
 int Is_GSL_Vector_Equal(const gsl_vector* A, const gsl_vector* B);
 int Is_GSL_Matrix_Equal(const gsl_matrix* A, const gsl_matrix* B);
+noinline double GetIsEqualKnob();
+noinline double ResetIsEqualKnob();
+noinline double AdjustIsEqualKnob(int pwr10); // Multiply by 10^(pwr10)
 double Get_GSL_Matrix_RMSD(const gsl_matrix* A, const gsl_matrix*);
 double Get_GSL_Vector_RMSD(const gsl_vector* A, const gsl_vector*);
 int my_dgemv(CBLAS_TRANSPOSE_t Trans, double alpha, const gsl_matrix* A, const gsl_vector* X, double beta, gsl_vector* Y);
@@ -193,9 +200,10 @@ double my_sum_matrix(const gsl_matrix*);
 #define FT_TOLERANCE_UPPER 1.000000000001
 */
 
-#define NUM_OF_RERUN 10	// Up to how many re-runs ? If the number is exceeded the program would return the last result
+#define NUM_OF_RERUN 35	// Up to how many re-runs ? If the number is exceeded the program would return the last result
 #define NUM_OF_SIGSEGV 500 // Up to how many SIGSEGV's ? If the number is exceeded the program would be aborted.
 			   // 04-21-2012 Increased for running LASSO @ FR 1e-07...
+			   // 08-18-2012 To pass the tough 4-MM test, we need some more seg-fault tolerance.
 
 struct matrix_ECC {
 	int size1;
