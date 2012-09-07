@@ -1257,13 +1257,16 @@ void GSL_BLAS_DTRSV_FT3(CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t TransA,
 	TRIPLICATE_SIZE_T(X->size, vxs0, vxs1, vxs2);       // X
 	TRIPLICATE_SIZE_T(X->stride, vxst0, vxst1, vxst2);  // X
 	
+	MY_SET_SIGSEGV_HANDLER();
 	double sumA, sumX;
 	sumA=my_sum_matrix(A); sumX=my_sum_vector(X); 
 	void *ecMatA, *ecVecX;
 	/* Protect pointers to ECC codes */
 	unsigned long ema0, ema1, ema2, evx0, evx1, evx2;
 	nonEqualCount=0;
-	MY_SET_SIGSEGV_HANDLER();
+	
+	DBG(printf("[DTRSV_FT3] 2. Encoding Input\n"));
+	
 	encode(A->data, (A->size1*A->size2), &ecMatA); 
 	TRIPLICATE(ecMatA, ema0, ema1, ema2); // A
 
