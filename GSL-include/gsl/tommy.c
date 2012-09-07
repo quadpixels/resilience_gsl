@@ -72,12 +72,7 @@ double my_sum_vector(const gsl_vector* v) {
 	MY_SET_SIGSEGV_HANDLER();
 	int jmpret;
 	SUPERSETJMP("my_sum_vector");
-	if(jmpret == 0) {
-		return my_sum_vector_actual(v);
-	} else {
-		DBG(printf("Some errors -- giving up computing my_sum_vector\n"));
-		return -999;
-	}
+	return my_sum_vector_actual(v);
 }
 
 noinline
@@ -1259,6 +1254,7 @@ void GSL_BLAS_DTRSV_FT3(CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t TransA,
 	
 	MY_SET_SIGSEGV_HANDLER();
 	double sumA, sumX;
+	DBG(printf("[DTRSV_FT3] 1. Get Sum of Mat and Vec\n"));
 	sumA=my_sum_matrix(A); sumX=my_sum_vector(X); 
 	void *ecMatA, *ecVecX;
 	/* Protect pointers to ECC codes */
