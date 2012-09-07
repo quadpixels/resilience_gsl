@@ -1071,7 +1071,7 @@ void GSL_BLAS_DGEMV_FT3(CBLAS_TRANSPOSE_t Trans, double alpha,
 	gsl_vector* vecY_bak = gsl_vector_alloc(vecY->size);
 	gsl_vector_memcpy(vecY_bak, vecY);
 	TRIPLICATE(vecY_bak, vecYbak0, vecYbak1, vecYbak2);
-	TRIPLICATE_SIZE_T(vecY_bak->data, vybkd0, vybkd1, vybkd2);
+	TRIPLICATE(vecY_bak->data, vybkd0, vybkd1, vybkd2);
 
 	encode((matA->data), (matA->size1*matA->size2), &ecMatA); 
 	TRIPLICATE(ecMatA, ema0, ema1, ema2);
@@ -1116,8 +1116,8 @@ void GSL_BLAS_DGEMV_FT3(CBLAS_TRANSPOSE_t Trans, double alpha,
 				TRI_RECOVER_SIZE_T((*vybs), vys0, vys1, vys2); // Y and Y_bak share
 				size_t *vybst= &(((gsl_vector*)vecY_bak)->stride);
 				TRI_RECOVER_SIZE_T((*vybst),vyst0,vyst1,vyst2);
-				size_t *vybkd = &(((gsl_vector*)vecY_bak)->data);
-				TRI_RECOVER_SIZE_T((*vybkd),vybkd0,vybkd1,vybkd2);
+				TRI_RECOVER(vybkd0,vybkd1,vybkd2);
+				if(vecY_bak->data != (double*)vybkd0) vecY_bak->data=(double*)vybkd0;
 				TRI_RECOVER(evy0, evy1, evy2);                 // the same dims
 				MY_VEC_CHK_RECOVER_POECC(sumY, (void*)evy0, (gsl_vector*)vecYbak0);
 				
