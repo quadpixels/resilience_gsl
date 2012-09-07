@@ -71,20 +71,13 @@
   }
 
   /* form  y := beta*y */
-  REAL_TRY(0) {
+REAL_TRY(0) {
   if (beta == 0.0) {
     INDEX iy = OFFSET(lenY, incY);
     INDEX iy1= iy + 1;
     INDEX iy2= iy + 2;
     for (i = 0; i < lenY; i++) {
 //      Y[iy] = 0.0;
-      
-#define PROTECT_IDX_IY \
-      if((iy != iy1-1) && (iy1-1 == iy2-2)) iy=iy1-1; \
-      if((iy1-1 != iy2-2) && (iy2-2 == iy)) iy1=iy+1; \
-      if((iy2-2 != iy) && (iy == iy1-1)) iy2 = iy+2;
-
-      PROTECT_IDX_IY;
 
 #define FETCH_Y_IY \
       BASE* y_iy = Y + iy; \
@@ -102,7 +95,7 @@
     INDEX iy1 = iy+1, iy2 = iy+2;
     for (i = 0; i < lenY; i++) {
 //    Y[iy] *= beta;
-	  PROTECT_IDX_IY;
+	  
       FETCH_Y_IY;
       (*y_iy) *= beta;
       
@@ -111,45 +104,83 @@
       iy2 = iy + 2;
     }
   }
-  } REAL_CATCH(0) {} REAL_END(0);
+} REAL_CATCH(0) {} REAL_END(0);
 
   if (alpha == 0.0)
     return;
   if ((order == CblasRowMajor && Trans == CblasNoTrans)
       || (order == CblasColMajor && Trans == CblasTrans)) {
-	REAL_TRY(1) {
+REAL_TRY(1) {
     /* form  y := alpha*A*x + y */
     INDEX iy = OFFSET(lenY, incY);
+    INDEX iy1 = iy + 1;
+    INDEX iy2 = iy + 2;
     for (i = 0; i < lenY; i++) {
       BASE temp = 0.0;
       INDEX ix = OFFSET(lenX, incX);
-      for (j = 0; j < lenX; j++) {
-        temp += X[ix] * A[lda * i + j];
+      INDEX ix1 = ix + 1;
+      INDEX ix2 = ix + 2;
+      for (j = 0; j < lenX; j++) {    	
+//        temp += X[ix] * A[lda * i + j];
+		#define ASSIGN_X_IX \
+		const BASE* x_ix = X + ix; \
+		if(x_ix != X+ix1-1 && X+ix1-1==X+ix2-2) x_ix=X+ix1-1; \
+		
+		ASSIGN_X_IX;
+		temp += (*x_ix)*A[lda*i + j];
         ix += incX;
+        ix1 = ix + 1;
+        ix2 = ix + 2;
       }
       Y[iy] += alpha * temp;
       iy += incY;
+      iy1 = iy + 1;
+      iy2 = iy + 2;
     }
-    } REAL_CATCH(1) {} REAL_END(1);
+} REAL_CATCH(1) {} REAL_END(1);
   } else if ((order == CblasRowMajor && Trans == CblasTrans)
              || (order == CblasColMajor && Trans == CblasNoTrans)) {
     /* form  y := alpha*A'*x + y */
-	REAL_TRY(2) {
+REAL_TRY(2) {
     INDEX ix = OFFSET(lenX, incX);
+    INDEX ix1 = ix + 1;
+    INDEX ix2 = ix + 2;
     for (j = 0; j < lenX; j++) {
-      const BASE temp = alpha * X[ix];
+      ASSIGN_X_IX;
+//    const BASE temp = alpha * X[ix];
+	  const BASE temp = alpha * (*x_ix);
       if (temp != 0.0) {
         INDEX iy = OFFSET(lenY, incY);
+        INDEX iy1 = iy + 1;
+        INDEX iy2 = iy + 2;
         for (i = 0; i < lenY; i++) {
-          Y[iy] += temp * A[lda * j + i];
-          iy += incY;
+          #define ASSIGN_Y_IY \
+          BASE* y_iy = Y + iy; \
+          if(y_iy != Y+iy1-1 && Y+iy1-1==Y+iy2-2) y_iy=Y+iy1-1;
+          
+          ASSIGN_Y_IY;
+//        Y[iy] += temp * A[lda * j + i];
+		  *y_iy += temp * A[lda*j+i];
+          
+		  iy += incY;
+		  iy1 = iy + 1;
+		  iy2 = iy + 2;
         }
       }
       ix += incX;
+      ix1 = ix + 1;
+      ix2 = ix + 2;
     }
-	} REAL_CATCH(2) {} REAL_END(2);
+} REAL_CATCH(2) {} REAL_END(2);
 
   } else {
     BLAS_ERROR("unrecognized operation");
   }
 }
+
+#undef TRI_BASE
+#undef TR_R_B_MSG
+#undef TR_R_I_MSG
+#undef TRI_RECOVER_BASE
+#undef PROTECT_IDX_I
+#undef PROTECT_IDX_J

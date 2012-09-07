@@ -10,8 +10,8 @@ extern "C" {
 #endif
 /* Re-writing the Po block ECC in C language. */
 /* 2012-05-06 */
-
-#define BLK_LEN 3
+// How much do we need ?!
+#define BLK_LEN 10
 #define BLKSIZE (BLK_LEN*BLK_LEN)
 
 /* How many times do we correct the ECC code itself? */

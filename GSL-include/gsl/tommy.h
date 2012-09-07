@@ -38,7 +38,7 @@ extern jmp_buf buf_2;
 /* To enable/disable verbose output */
 
 
-//#define DEBUG
+#define DEBUG
 #ifdef DEBUG    
 #define DBG(call) { call; }
 #else   

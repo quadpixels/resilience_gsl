@@ -61,7 +61,7 @@ unsigned int do_decode(double* patient, const int offsetPatient, const int lenPa
 {
 	
 unsigned int failed_corr = 0;
-FTV_REAL_TRY(0) {
+//FTV_REAL_TRY(0) {
 	double colSums[BLK_LEN], rowSums[BLK_LEN], tileSum, grandTotal, rowSum=0, colSum=0;
 	unsigned int isColDiff[BLK_LEN], isRowDiff[BLK_LEN]; /* If isColDiff[2] is 1, then column sum 2 is different */
 	int nTiles = (lenDoc - 1) / (2*BLK_LEN + 1), pRSum, pCSum;
@@ -70,14 +70,15 @@ FTV_REAL_TRY(0) {
 
 	/* Iterating through the patient */
 	#ifndef FT_ENCODE
-	for(i=0; i<nTiles; i++) {
+		for(i=0; i<nTiles; i++) {
 	#else
-	unsigned long patient0, patient1, patient2;
-	TRIPLICATE(patient, patient0, patient1, patient2);
-	for(i=0, i1=1, i2=2; i<nTiles; i++, i1++, i2++, PROTECT_IDX_I) {
+		unsigned long patient0, patient1, patient2;
+		TRIPLICATE(patient, patient0, patient1, patient2);
+		for(i=0, i1=1, i2=2; i<nTiles; i++, i1++, i2++, PROTECT_IDX_I) {
 		TRI_RECOVER(patient0, patient1, patient2);
 		if(patient != (double*)patient0) patient=(double*)patient0;
 	#endif
+//		printf("i=%d ", i);
 		for(j=0; j<BLK_LEN; j++) { colSums[j] = rowSums[j] = isRowDiff[j] = isColDiff[j] = 0; }
 		tileSum = 0;
 		int pPTStart = offsetPatient + i*BLKSIZE; // Patient Tile Start
@@ -157,7 +158,7 @@ FTV_REAL_TRY(0) {
 			}
 		}
 	}
-	}FTV_REAL_CATCH(0) {} FTV_REAL_END(0);
+//	}FTV_REAL_CATCH(0) {} FTV_REAL_END(0);
 	return failed_corr;
 }
 
