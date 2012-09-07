@@ -489,7 +489,12 @@ int Is_GSL_DSYRK_Equal2(const CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t trans,
 	if(beta!=0) {
 		c = gsl_matrix_alloc(n, n);
 		for(i=0; i<n; i++) {
-			for(j=0; j<n; j++) {gsl_matrix_set(c, i, j, gsl_matrix_get(C2, i, j) - beta * gsl_matrix_get(C, i, j));}
+			for(j=0; j<n; j++) {
+//				gsl_matrix_set(c, i, j, gsl_matrix_get(C2, i, j) - beta * gsl_matrix_get(C, i, j));
+				double c2 = C2->data[C2->tda*i + j];
+				double c1 = C ->data[C ->tda*i + j];
+				c->data[c->tda*i + j] = c2 - beta*c1;
+			}
 		}
 	}
 	int ret;
@@ -734,7 +739,7 @@ FTV_REAL_TRY(0) {
 	for(i=rowstart; i<=rowend; i++) {
 		double tmp = 0;
 		for(j=colstart; j<=colend; j++) {
-			tmp = tmp + gsl_vector_get(v, j) * gsl_matrix_get(C, i, j);
+			tmp = tmp + gsl_vector_get(v, j) * gsl_matrix_get(C, i, j) * alpha;
 		}
 		gsl_vector_set(cv, i, tmp);
 	}
