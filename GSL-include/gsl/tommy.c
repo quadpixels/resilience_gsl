@@ -51,13 +51,14 @@ double my_sum_vector_actual(const gsl_vector* v) {
 	DBG(printf("[my_sum_vector] v=%lx, v->data=%lx, size=%ld, stride=%ld\n", 
 		(unsigned long)v, v->data, v->size, v->stride));
 	FTV_REAL_TRY(0) {
-		#ifdef FT_CHKR
+		#ifdef FT_CHKRxx
 		int i, i1, i2; for(i=0; i<v->size; i++, i1++, i2++,
 			PROTECT_IDX_I
 			) {
 		#else
 		int i; for(i=0; i<v->size; i++) {
 		#endif
+			printf("i=%d ", i);
 			// The same as my_sum_matrix_actual; the GSL's routine may not
 			// play well here....
 //			ret = ret + gsl_vector_get(v, i);
@@ -1311,6 +1312,8 @@ void GSL_BLAS_DTRSV_FT3(CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t TransA,
 		}
 	}
 	DBG(printf("[DTRSV_FT]Normal call to dsyrk.. nonEqualCount=%d\n", nonEqualCount));
+	SUPERSETJMP("Just before dtrsv");
+	if(jmpret != 0) { goto kk; }
 	SW3START; 
 	int ret = gsl_blas_dtrsv(uplo, TransA, Diag, A, X);
 	SW3STOP; 
