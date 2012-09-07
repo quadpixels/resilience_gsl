@@ -72,7 +72,11 @@ FTV_REAL_TRY(0) {
 	#ifndef FT_ENCODE
 	for(i=0; i<nTiles; i++) {
 	#else
+	unsigned long patient0, patient1, patient2;
+	TRIPLICATE(patient, patient0, patient1, patient2);
 	for(i=0, i1=1, i2=2; i<nTiles; i++, i1++, i2++, PROTECT_IDX_I) {
+		TRI_RECOVER(patient0, patient1, patient2);
+		if(patient != (double*)patient0) patient=(double*)patient0;
 	#endif
 		for(j=0; j<BLK_LEN; j++) { colSums[j] = rowSums[j] = isRowDiff[j] = isColDiff[j] = 0; }
 		tileSum = 0;
@@ -215,7 +219,6 @@ unsigned int encode(const double* array, const int len, void** backup) {
 	my_stopwatch_checkpoint(8);
 	#endif
 	
-FTV_REAL_TRY(0) {
 	/* 1. Some preparations. */
 	const int nTiles = ((len-1) / BLKSIZE) + 1;
 	const int eccSize = ((nTiles*BLK_LEN*2) + nTiles + 1);
@@ -229,8 +232,13 @@ FTV_REAL_TRY(0) {
 		unsigned long ret0, ret1, ret2;
 		TRIPLICATE(ret, ret0, ret1, ret2);
 		printf("[encode] Triplicated ret\n");
+		if(jmpret != 0) {
+			TRI_RECOVER(ret0, ret1, ret2);
+			if(ret != (double*)ret0) ret = (double*)ret0;
+		}
 	#endif
 	
+FTV_REAL_TRY(0) {
 	/* 3. Calculate the ECC of the input array and the ECC of the ECC. */
 	do_encode(array, 0, len, ret, 0);
 #ifdef FT_ENCODE
@@ -352,6 +360,8 @@ FTV_REAL_TRY(0) {
 		for(i=0; i<nTiles; i++) {
 	#else
 		for(i=0, i1=1, i2=2; i<nTiles; i++, i1++, i2++, PROTECT_IDX_I) {
+			TRI_RECOVER(out0, out1, out2);
+			if(out!=(double*)out0) out=(double*)out0;
 	#endif
 		int pStart = offsetIn + i*BLKSIZE, pEnd = pStart + BLKSIZE;
 		if(pEnd > offsetIn + lenIn) pEnd=offsetIn + lenIn;
