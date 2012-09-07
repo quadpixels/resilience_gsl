@@ -29,6 +29,7 @@ void MY_SET_SIGSEGV_HANDLER() {
 	sigemptyset(&sa.sa_mask);
 	sigaction(SIGSEGV, &sa, NULL);
 	sigaction(SIGBUS,  &sa, NULL);
+	sigaction(SIGILL,  &sa, NULL);
 }
 
 noinline
