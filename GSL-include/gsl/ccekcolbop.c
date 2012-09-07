@@ -59,16 +59,21 @@ noinline
 unsigned int do_decode(double* patient, const int offsetPatient, const int lenPatient, 
 	const double* doc, const int offsetDoc, const int lenDoc) /* lenDoc in num of elements */
 {
+	
 unsigned int failed_corr = 0;
 FTV_REAL_TRY(0) {
 	double colSums[BLK_LEN], rowSums[BLK_LEN], tileSum, grandTotal, rowSum=0, colSum=0;
 	unsigned int isColDiff[BLK_LEN], isRowDiff[BLK_LEN]; /* If isColDiff[2] is 1, then column sum 2 is different */
 	int nTiles = (lenDoc - 1) / (2*BLK_LEN + 1), pRSum, pCSum;
-	int i, j, k, p, rowId, colId, pColStart, pRowStart;
+	int i, i1, i2, j, k, p, rowId, colId, pColStart, pRowStart;
 
 
 	/* Iterating through the patient */
+//	#ifndef FT_ENCODE
 	for(i=0; i<nTiles; i++) {
+//	#else
+//	for(i=0, i1=1, i2=2; i<nTiles; i++, i1++, i2++, PROTECT_IDX_I) {
+//	#endif
 		for(j=0; j<BLK_LEN; j++) { colSums[j] = rowSums[j] = isRowDiff[j] = isColDiff[j] = 0; }
 		tileSum = 0;
 		int pPTStart = offsetPatient + i*BLKSIZE; // Patient Tile Start
@@ -155,6 +160,15 @@ FTV_REAL_TRY(0) {
 noinline
 unsigned int decode(double* patient, const int lenPatient, const double* doc) {
 unsigned int failed_corr = 0;
+	printf("[decode] patient=%lx lenPatient=%d doc=%lx\n", (unsigned long)patient,
+		lenPatient, (unsigned long)doc);
+	int jmpret = 0;
+	SUPERSETJMP("Block ECC decode()");
+	
+	#ifdef TOMMY_H
+	my_stopwatch_checkpoint(8);
+	#endif
+
 FTV_REAL_TRY(0) {
 	/* Perhaps protecting patient and doctor also? */
 	unsigned long p0, p1, p2;
@@ -182,6 +196,10 @@ FTV_REAL_TRY(0) {
 		print_array(doc, "Doctor", lenPatient);
 	}
 #endif
+	#ifdef TOMMY_H
+	my_stopwatch_stop(8);
+	#endif
+
 	return failed_corr;
 }
 

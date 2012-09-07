@@ -1413,6 +1413,7 @@ float MY_VEC_CHK_RECOVER_POECC(double sum, void* ecVec, gsl_vector* vec) {
 	double* ecv1, *ecv2; ecv1=(double*)ecVec; ecv2=(double*)ecVec;
 	double c = my_sum_vector(vec);
 	if(c!=sum) {
+		DBG(printf("[Vector RECOVER_POECC] Sums not equal for ecVec=%lx, vec=%lx.\n", (long)ecVec, (long)vec));
 		gsl_vector *vec1, *vec2; vec1=(gsl_vector*)vec; vec2=(gsl_vector*)vec;
 		my_stopwatch_checkpoint(8);
 		MY_SET_SIGSEGV_HANDLER();
