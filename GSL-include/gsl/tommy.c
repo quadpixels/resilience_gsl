@@ -1,4 +1,4 @@
-// BRANCH "20120817", this file has been synced with branch "master"
+// BRANCH "Master" --------> This code lets you go home in a TANK!
 // 08-12: Re-write some of the FT routines. Hope it will be fault-tolerant.
 #include "tommy.h"
 #include "triplicate.h"
@@ -1032,34 +1032,46 @@ void GSL_BLAS_DGEMV_FT3(CBLAS_TRANSPOSE_t Trans, double alpha,
 	/* Protect pointers to matrix A, vectors X and (the original) Y */
 	unsigned long matA0, matA1, matA2,
 	              vecX0, vecX1, vecX2,
-		      vecY0, vecY1, vecY2;
-	TRIPLICATE(matA, matA0, matA1, matA2);
-	TRIPLICATE(vecX, vecX0, vecX1, vecX2);
-
+	              vecY0, vecY1, vecY2,
+	              vecYbak0, vecYbak1, vecYbak2;
+	TRIPLICATE(matA, matA0, matA1, matA2); // A
+	TRIPLICATE(vecX, vecX0, vecX1, vecX2); // X
+	TRIPLICATE(vecY, vecY0, vecY1, vecY2); // Y
+	
 	/* Protect size_t of A, X and Y */
-	size_t mas10, mas11, mas12;
-	size_t mas20, mas21, mas22;
-	size_t vxs0, vxs1, vxs2;
-	size_t vys0, vys1, vys2;
+	size_t mas10, mas11, mas12;  // A
+	size_t mas20, mas21, mas22;  // A
+	size_t matda0,matda1,matda2; // A
+	size_t vxs0, vxs1, vxs2;  // X
+	size_t vxst0,vxst1,vxst2; // X
+	size_t vys0, vys1, vys2;  // Y
+	size_t vyst0,vyst1,vyst2; // Y
+	size_t vybkd0, vybkd1, vybkd2; // Y_bak->data
 	TRIPLICATE_SIZE_T(matA->size1, mas10, mas11, mas12);
 	TRIPLICATE_SIZE_T(matA->size2, mas20, mas21, mas22);
+	TRIPLICATE_SIZE_T(matA->tda,   matda0,matda1,matda2);
 	TRIPLICATE_SIZE_T(vecX->size,  vxs0,  vxs1,  vxs2);
+	TRIPLICATE_SIZE_T(vecX->stride,vxst0, vxst1, vxst2);
 	TRIPLICATE_SIZE_T(vecY->size,  vys0,  vys1,  vys2);
+	TRIPLICATE_SIZE_T(vecY->stride,vyst0, vyst1, vyst2);
 
 
 	MY_SET_SIGSEGV_HANDLER();
 	double sumA, sumX, sumY; 
+	DBG(printf("[DGEMV_FT3] 1. Get sum of Mat and Vec\n"));
 	sumA=my_sum_matrix(matA); sumX=my_sum_vector(vecX); sumY=my_sum_vector(vecY); 
 
 	/* Protect ptrs to ECC codes. */
 	void* ecMatA, *ecVecX, *ecVecY;
 	unsigned long ema0, ema1, ema2, evx0, evx1, evx2, evy0, evy1, evy2;
+	nonEqualCount = 0;
 
 	DBG(printf("[DGEMV_FT3] 2. Encoding input\n"));
 
 	gsl_vector* vecY_bak = gsl_vector_alloc(vecY->size);
 	gsl_vector_memcpy(vecY_bak, vecY);
-	TRIPLICATE(vecY_bak, vecY0, vecY1, vecY2);
+	TRIPLICATE(vecY_bak, vecYbak0, vecYbak1, vecYbak2);
+	TRIPLICATE(vecY_bak->data, vybkd0, vybkd1, vybkd2);
 
 	encode((matA->data), (matA->size1*matA->size2), &ecMatA); 
 	TRIPLICATE(ecMatA, ema0, ema1, ema2);
@@ -1076,28 +1088,46 @@ void GSL_BLAS_DGEMV_FT3(CBLAS_TRANSPOSE_t Trans, double alpha,
 		kk: 
 		DBG(printf("[DGEMV_FT3]Recovering input...\n"));
 		{
-		/* Recover ptr to A's ECC */
-		size_t *mas1 = &(((gsl_matrix*)matA)->size1);
-		size_t *mas2 = &(((gsl_matrix*)matA)->size2);
-		TRI_RECOVER_SIZE_T((*mas1), mas10, mas11, mas12);
-		TRI_RECOVER_SIZE_T((*mas2), mas20, mas21, mas22);
-		TRI_RECOVER(matA0, matA1, matA2);
-		TRI_RECOVER(ema0, ema1, ema2);
-		MY_MAT_CHK_RECOVER_POECC(sumA, (void*)ema0, (gsl_matrix*)matA0);
+			{ // Recover input data A
+				DBG(printf("[DGEMV_FT3]Recovering A ... \n"));
+				size_t *mas1 = &(((gsl_matrix*)matA)->size1);
+				size_t *mas2 = &(((gsl_matrix*)matA)->size2);
+				TRI_RECOVER_SIZE_T((*mas1), mas10, mas11, mas12);
+				TRI_RECOVER_SIZE_T((*mas2), mas20, mas21, mas22);
+				TRI_RECOVER(matA0, matA1, matA2);
+				TRI_RECOVER(ema0, ema1, ema2);
+				MY_MAT_CHK_RECOVER_POECC(sumA, (void*)ema0, (gsl_matrix*)matA0);
+			}
 
-		TRI_RECOVER(vecX0, vecX1, vecX2);
-		size_t *vxs = &(((gsl_vector*)vecX)->size);
-		TRI_RECOVER_SIZE_T((*vxs), vxs0, vxs1, vxs2);
-		TRI_RECOVER(evx0, evx1, evx2);
-		MY_VEC_CHK_RECOVER_POECC(sumX, (void*)evx0, (gsl_vector*)vecX0);
+			{ // Recover input data X
+				DBG(printf("[DGEMV_FT3]Recovering X ... \n"));
+				TRI_RECOVER(vecX0, vecX1, vecX2);
+				size_t *vxs = &(((gsl_vector*)vecX)->size);
+				TRI_RECOVER_SIZE_T((*vxs), vxs0, vxs1, vxs2);
+				TRI_RECOVER(evx0, evx1, evx2);
+				MY_VEC_CHK_RECOVER_POECC(sumX, (void*)evx0, (gsl_vector*)vecX0);
+			}
 
-		TRI_RECOVER(vecY0, vecY1, vecY2);
-		size_t *vys = &(((gsl_vector*)vecY_bak)->size);
-		TRI_RECOVER_SIZE_T((*vys), vys0, vys1, vys2);
-		TRI_RECOVER(evy0, evy1, evy2);
-		MY_VEC_CHK_RECOVER_POECC(sumY, (void*)evy0, (gsl_vector*)vecY0);
-
-		gsl_vector_memcpy(vecY, vecY_bak);
+			{ // Recover input/output data Y's backup
+			  // and copying back to Y
+			  	DBG(printf("[DGEMV_FT3]Recovering Y ... \n"));
+				TRI_RECOVER(vecYbak0, vecYbak1, vecYbak2);
+				size_t *vybs = &(((gsl_vector*)vecY_bak)->size);
+				TRI_RECOVER_SIZE_T((*vybs), vys0, vys1, vys2); // Y and Y_bak share
+				size_t *vybst= &(((gsl_vector*)vecY_bak)->stride);
+				TRI_RECOVER_SIZE_T((*vybst),vyst0,vyst1,vyst2);
+				TRI_RECOVER(vybkd0,vybkd1,vybkd2);
+				if(vecY_bak->data != (double*)vybkd0) vecY_bak->data=(double*)vybkd0;
+				TRI_RECOVER(evy0, evy1, evy2);                 // the same dims
+				MY_VEC_CHK_RECOVER_POECC(sumY, (void*)evy0, (gsl_vector*)vecYbak0);
+				
+				TRI_RECOVER(vecY0, vecY1, vecY2);
+				size_t *vys  = &(((gsl_vector*)vecY)->size);
+				TRI_RECOVER_SIZE_T((*vys),  vys0, vys1, vys2);
+				size_t* vyst = &(((gsl_vector*)vecY)->stride);
+				TRI_RECOVER_SIZE_T((*vyst), vyst0,vyst1,vyst2);
+				gsl_vector_memcpy(vecY, vecY_bak);
+			}
 		} 
 	}
 	DBG(printf("[DGEMV_FT3]Normal call to dgemv.. nonEqualCount=%d\n", nonEqualCount));
@@ -1311,7 +1341,7 @@ void GSL_BLAS_DTRSV_FT3(CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t TransA,
 			gsl_vector_memcpy(X, X_bak);
 		}
 	}
-	DBG(printf("[DTRSV_FT]Normal call to dsyrk.. nonEqualCount=%d\n", nonEqualCount));
+	DBG(printf("[DTRSV_FT]Normal call to dtrsv.. nonEqualCount=%d\n", nonEqualCount));
 	SUPERSETJMP("Just before dtrsv");
 	if(jmpret != 0) { goto kk; }
 	SW3START; 

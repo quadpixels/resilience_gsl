@@ -48,6 +48,7 @@
   }
 
   /* form  y := beta*y */
+  REAL_TRY(0) {
   if (beta == 0.0) {
     for (i = 0; i < n1; i++) {
       for (j = 0; j < n2; j++) {
@@ -61,6 +62,7 @@
       }
     }
   }
+  } REAL_CATCH(0) {} REAL_END(0);
 
   if (alpha == 0.0)
     return;
@@ -68,7 +70,7 @@
   if (TransF == CblasNoTrans && TransG == CblasNoTrans) {
 
     /* form  C := alpha*A*B + C */
-
+  REAL_TRY(1) {
     for (k = 0; k < K; k++) {
       for (i = 0; i < n1; i++) {
         const BASE temp = alpha * F[ldf * i + k];
@@ -79,11 +81,13 @@
         }
       }
     }
+  } REAL_CATCH(1) {} REAL_END(1);
 
   } else if (TransF == CblasNoTrans && TransG == CblasTrans) {
 
     /* form  C := alpha*A*B' + C */
 
+  REAL_TRY(2) {
     for (i = 0; i < n1; i++) {
       for (j = 0; j < n2; j++) {
         BASE temp = 0.0;
@@ -93,9 +97,11 @@
         C[ldc * i + j] += alpha * temp;
       }
     }
+  } REAL_CATCH(2) {} REAL_END(2);
 
   } else if (TransF == CblasTrans && TransG == CblasNoTrans) {
 
+  REAL_TRY(3) {
     for (k = 0; k < K; k++) {
       for (i = 0; i < n1; i++) {
         const BASE temp = alpha * F[ldf * k + i];
@@ -106,9 +112,11 @@
         }
       }
     }
+  } REAL_CATCH(3) {} REAL_END(3);
 
   } else if (TransF == CblasTrans && TransG == CblasTrans) {
 
+  REAL_TRY(4) {
     for (i = 0; i < n1; i++) {
       for (j = 0; j < n2; j++) {
         BASE temp = 0.0;
@@ -118,6 +126,7 @@
         C[ldc * i + j] += alpha * temp;
       }
     }
+  } REAL_CATCH(4) {} REAL_END(4);
 
   } else {
     BLAS_ERROR("unrecognized operation");
