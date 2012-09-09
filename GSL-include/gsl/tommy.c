@@ -1424,20 +1424,83 @@ void GSL_BLAS_DTRSV_FT3(CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t TransA,
 noinline
 void GSL_LINALG_CHOLESKY_DECOMP_FT3(gsl_matrix* A)
 {
+	// This one is easier, we only have one matrix to protect
 	double sumA; 
-	sumA=my_sum_matrix(A); 
-	void* ecMatA; 
+	sumA=my_sum_matrix(A);
+	
+	/* Protect pointer to matrix A */
+	unsigned long matA0, matA1, matA2,
+	                matAb0, matAb1, matAb2;
+	TRIPLICATE(A, matA0, matA1, matA2);
+	
+	/* Protect A->{size1, size2, tda, data} */
+	size_t mas10, mas11, mas12; // A->size1
+	size_t mas20, mas21, mas22; // A->size2
+	size_t matda0,matda1,matda2;// A->tda
+	size_t mad0,  mad1,  mad2;  // A->data
+	TRIPLICATE_SIZE_T(A->size1, mas10, mas11, mas12);
+	TRIPLICATE_SIZE_T(A->size2, mas20, mas21, mas22);
+	TRIPLICATE_SIZE_T(A->tda,   matda0,matda1,matda2);
+	TRIPLICATE(A->data,  mad0,  mad1,  mad2);
+	
+	/* Protect A_bak -> data
+	 * A_bak and A have the same dimensions so we save some space */
+	size_t mabd0,  mabd1,  mabd2;
+	
+	void* ecMatA;
+	/* Protect pointer to ECC data of matrix A */
+	unsigned long ema0, ema1, ema2;
+	
 	nonEqualCount=0; 
 	MY_SET_SIGSEGV_HANDLER(); 
-	encode(A->data, (A->size1*A->size2), &ecMatA); 
+	encode(A->data, (A->size1*A->size2), &ecMatA);
+	TRIPLICATE(ecMatA, ema0, ema1, ema2);
+	
+	/* Back up A */
+	gsl_matrix* A_bak = gsl_matrix_alloc(A->size1, A->size2);
+	TRIPLICATE(A_bak, matAb0, matAb1, matAb2);
+	TRIPLICATE(A_bak->data, mabd0, mabd1, mabd2);
+	gsl_matrix_memcpy(A_bak, A);
+	
 	int jmpret = 0, isEqual; 
-	jmpret = sigsetjmp(buf, 1); 
+	SUPERSETJMP("[GSL_LINALG_CHOLESKY_DECOMP_FT3] After encoding\n"); 
 	if(jmpret != 0) {
 		kk: 
-		MY_MAT_CHK_RECOVER_POECC(sumA, ecMatA, A); 
+		
+		{
+			// Recover A's fields and A_bak's fields
+			size_t *mas1 = &(((gsl_matrix*)A)->size1);
+			size_t *mabs1= &(((gsl_matrix*)A_bak)->size1);
+			size_t *mas2 = &(((gsl_matrix*)A)->size2);
+			size_t *mabs2= &(((gsl_matrix*)A_bak)->size2);
+			size_t *matda= &(((gsl_matrix*)A)->tda);
+			size_t *mabtda=&(((gsl_matrix*)A_bak)->tda);
+			TRI_RECOVER_SIZE_T((*mas1), mas10, mas11, mas12);
+			TRI_RECOVER_SIZE_T((*mabs1), mas10, mas11, mas12);
+			TRI_RECOVER_SIZE_T((*mas2), mas20, mas21, mas22);
+			TRI_RECOVER_SIZE_T((*mabs2), mas20, mas21, mas22);
+			TRI_RECOVER_SIZE_T((*matda), matda0, matda1, matda2);
+			TRI_RECOVER_SIZE_T((*mabtda), matda0, matda1, matda2);
+			TRI_RECOVER(mad0, mad1, mad2);
+			if(A->data != (double*)mad0) A->data = (double*)mad0;
+			TRI_RECOVER(mabd0, mabd1, mabd2);
+			if(A_bak->data != (double*)mabd0) A_bak->data=(double*)mabd0;
+		}
+		{
+			// Correct A_bak
+			TRI_RECOVER(ema0, ema1, ema2);
+			if((unsigned long)ecMatA != ema0) ecMatA=(void*)ema0;
+			TRI_RECOVER(matAb0, matAb1, matAb2);
+			if((unsigned long)A_bak != matAb0) A_bak = (gsl_matrix*)matAb0;
+			MY_MAT_CHK_RECOVER_POECC(sumA, ecMatA, A_bak);
+		}
+		{
+			// Copy back
+			TRI_RECOVER(matA0, matA1, matA2);
+			if((unsigned long)A != matA0) A = (gsl_matrix*)matA0;
+			gsl_matrix_memcpy(A, A_bak);
+		}
 	}
-	gsl_matrix* A_bak = gsl_matrix_alloc(A->size1, A->size2); 
-	gsl_matrix_memcpy(A_bak, A); 
 	DBG(printf("[GSL_LINALG_CHOLESKY_DECOMP_FT3] normal call to cholesky_decomp. nonEqualCount=%d\n", nonEqualCount)); 
 	SW3START; 
 	int ret = gsl_linalg_cholesky_decomp(A); 
