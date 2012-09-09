@@ -718,6 +718,8 @@ FTV_REAL_TRY(0) {
 noinline
 int Is_GSL_linalg_cholesky_decomp_Equal(const gsl_matrix* A, const gsl_matrix* A_out) {
 	MY_SET_SIGSEGV_HANDLER();
+	int jmpret;
+	SUPERSETJMP("Is_GSL_linalg_cholesky_decomp_Equal");
 	return Is_GSL_linalg_cholesky_decomp_Equal_actual(A, A_out);
 }
 
