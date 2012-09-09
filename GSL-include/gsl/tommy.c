@@ -915,6 +915,7 @@ void GSL_BLAS_DGEMM_FT3(CBLAS_TRANSPOSE_t TransA, CBLAS_TRANSPOSE_t TransB,
 	encode((matA->data), (matA->size1*matA->size2), &ecMatA); 
 	TRIPLICATE(ecMatA, ema_0, ema_1, ema_2);
 	DBG(printf("[DGEMM_FT3] ECC Code Addr: A=%lx, B=%lx, C=%lx\n", (unsigned long)ecMatA, (unsigned long)ecMatB, (unsigned long)ecMatC));
+	ResetIsEqualKnob();
 	SUPERSETJMP("After encoding");
 	if(jmpret != 0) {
 		kk:
@@ -985,7 +986,6 @@ chk_rec_c:
 	gsl_blas_dgemm(TransA, TransB, alpha, matA, matB, beta, matC);
 	SW3STOP;
 	DBG(printf("[DGEMM_FT3] Check Results..\n"));
-	ResetIsEqualKnob();
 	isEqual = Is_GSL_MM_Equal(TransA, TransB, alpha, matA, matB, beta, matC_bak, matC);
 	if(isEqual==1) { DBG(printf("[DGEMM_FT3]Result: Equal\n")); }
 	else {
@@ -995,9 +995,11 @@ chk_rec_c:
 		num_total_retries += 1;
 		if(nonEqualCount < NUM_OF_RERUN) {
 			printf("[DGEMM_FT3]Restart calculation.\n");
+			if((nonEqualCount & 4)==4) AdjustIsEqualKnob(1);
 			goto kk;
 		}
 	}
+	ResetIsEqualKnob();
 	my_stopwatch_stop(6);
 	printf("[DGEMM_FT3]Releasing memory for mat_bak's and deleting temp files\n");
 	SUPERSETJMP("Just before free");
@@ -1100,6 +1102,7 @@ void GSL_BLAS_DGEMV_FT3(CBLAS_TRANSPOSE_t Trans, double alpha,
 	nonEqualCount=0;
 	int jmpret, isEqual;
 	DBG(printf("[DGEMV_FT3] 3. Setjmp\n"));
+	ResetIsEqualKnob();
 	SUPERSETJMP("[DGEMV_FT3] After encoding\n");
 	if(jmpret != 0) {
 		kk: 
@@ -1156,7 +1159,6 @@ void GSL_BLAS_DGEMV_FT3(CBLAS_TRANSPOSE_t Trans, double alpha,
 	gsl_blas_dgemv(Trans, alpha, matA, vecX, beta, vecY);
 	SW3STOP; 
 	my_stopwatch_checkpoint(11); 
-	ResetIsEqualKnob();
 	isEqual = Is_GSL_DGEMV_Equal(Trans, alpha, matA, vecX, beta, vecY_bak, vecY);
 	my_stopwatch_stop(11); 
 	if(isEqual==1) { DBG(printf("[DGEMV_FT3]Result: Equal\n")); }
@@ -1166,10 +1168,12 @@ void GSL_BLAS_DGEMV_FT3(CBLAS_TRANSPOSE_t Trans, double alpha,
 		nonEqualCount = nonEqualCount + 1;
 		if(nonEqualCount < NUM_OF_RERUN) {
 			DBG(printf("[DGEMV_FT3]Restart calculation.\n"));
+			if((nonEqualCount % 4)==4) AdjustIsEqualKnob(1);
 			goto kk; 
 		}
 	}
 	my_stopwatch_stop(6); 
+	ResetIsEqualKnob();
 	DBG(printf("[DGEMV_FT3]Releasing memory for vec_bak's\n"));
 	SUPERSETJMP("Just before free");
 	if(jmpret == 0) {
@@ -1237,6 +1241,8 @@ void GSL_BLAS_DSYRK_FT3(CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t trans,
 
 	int jmpret, isEqual;
 	SUPERSETJMP("[DSYRK_FT3] After encoding\n");
+	ResetIsEqualKnob(); // RK's checkers requires larger tolerance, perhaps, perhaps ...
+	AdjustIsEqualKnob(3);
 	if(jmpret!=0) {
 		kk: 
 		DBG(printf("[DSYRK_FT3]Recovering matrices from error correction data (jmpret=%d)\n", jmpret));
@@ -1264,8 +1270,6 @@ void GSL_BLAS_DSYRK_FT3(CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t trans,
 	gsl_blas_dsyrk(uplo, trans, alpha, A, beta, C);
 	my_stopwatch_stop(3);
 	my_stopwatch_checkpoint(11); // Time spent in checks
-	ResetIsEqualKnob(); // RK's checkers requires larger tolerance, perhaps, perhaps ...
-	AdjustIsEqualKnob(3);
 	isEqual = Is_GSL_DSYRK_Equal2(uplo, trans, alpha, A, beta, C_bak, C); // May use Equal or Equal2
 	my_stopwatch_stop(11);
 	if(isEqual==1) { DBG(printf("[DSYRK_FT3]Result: Equal\n")); }
@@ -1463,7 +1467,8 @@ void GSL_LINALG_CHOLESKY_DECOMP_FT3(gsl_matrix* A)
 	gsl_matrix_memcpy(A_bak, A);
 	
 	int jmpret = 0, isEqual; 
-	SUPERSETJMP("[GSL_LINALG_CHOLESKY_DECOMP_FT3] After encoding\n"); 
+	ResetIsEqualKnob();
+	SUPERSETJMP("[GSL_LINALG_CHOLESKY_DECOMP_FT3] After encoding\n");
 	if(jmpret != 0) {
 		kk: 
 		
@@ -1503,6 +1508,10 @@ void GSL_LINALG_CHOLESKY_DECOMP_FT3(gsl_matrix* A)
 	}
 	DBG(printf("[GSL_LINALG_CHOLESKY_DECOMP_FT3] normal call to cholesky_decomp. nonEqualCount=%d\n", nonEqualCount)); 
 	SW3START; 
+	SUPERSETJMP("Just before cholesky_decomp");
+	if(jmpret != 0) {
+		goto kk;
+	}
 	int ret = gsl_linalg_cholesky_decomp(A); 
 	SW3STOP; 
 	if(ret != GSL_SUCCESS) { DBG(printf("[GSL_LINALG_CHOLESKY_DECOMP_FT3] GSL_ERROR occurrec\n")); isEqual=1; /* To force the routine to quit */} 
@@ -1513,12 +1522,24 @@ void GSL_LINALG_CHOLESKY_DECOMP_FT3(gsl_matrix* A)
 		DBG(printf("[GSL_LINALG_CHOLESKY_DECOMP_FT3] Result: NOT Equal\n")); 
 		nonEqualCount = nonEqualCount+1; 
 		if(nonEqualCount < NUM_OF_RERUN) {
-			DBG(printf("[GSL_LINALG_CHOLESKY_DECOMP_FT3] Restart calculation.\n")); 
+			DBG(printf("[GSL_LINALG_CHOLESKY_DECOMP_FT3] Restart calculation.\n"));
+			if((nonEqualCount & 4)==4) AdjustIsEqualKnob(1);
 			goto kk; 
 		} 
 	} 
-	my_stopwatch_stop(6); 
-	gsl_matrix_free(A_bak); 
+	ResetIsEqualKnob();
+	my_stopwatch_stop(6);
+	DBG(printf("[GSL_LINALG_CHOLESKY_DECOMP_FT3] Releasing memory\n"));
+	if(jmpret == 0)
+	{
+		TRI_RECOVER(ema0, ema1, ema2);
+		if((unsigned long)ecMatA != ema0) ecMatA=(void*)ema0;
+		free(ecMatA);
+		
+		TRI_RECOVER(matAb0, matAb1, matAb2);
+		if((unsigned long)A_bak != matAb0) A_bak = (gsl_matrix*)matAb0;
+		gsl_matrix_free(A_bak);
+	}
 	MY_REMOVE_SIGSEGV_HANDLER(); 
 }
 
