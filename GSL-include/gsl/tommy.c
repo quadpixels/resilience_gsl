@@ -1005,6 +1005,23 @@ chk_rec_c:
 		TRI_RECOVER(matC_0, matC_1, matC_2);
 		gsl_matrix_free((gsl_matrix*)matC_0);
 		printf("Released.\n");
+		
+		{
+			TRI_RECOVER(ema_0, ema_1, ema_2);
+			if((unsigned long)ecMatA != ema_0) ecMatA = (void*)ema_0;
+			free(ecMatA);
+		}
+		{
+			TRI_RECOVER(emb_0, emb_1, emb_2);
+			if((unsigned long)ecMatB != emb_0) ecMatB = (void*)emb_0;
+			free(ecMatB);
+		}
+		{
+			TRI_RECOVER(emc_0, emc_1, emc_2);
+			if((unsigned long)ecMatC != emc_0) ecMatC = (void*)emc_0;
+			free(ecMatC);
+		}
+		
 		// Last, restore the sizes of elements in case there are corruptions
 		{
 			size_t *mas1 = &(((gsl_matrix*)matA)->size1),
@@ -1157,6 +1174,21 @@ void GSL_BLAS_DGEMV_FT3(CBLAS_TRANSPOSE_t Trans, double alpha,
 	SUPERSETJMP("Just before free");
 	if(jmpret == 0) {
 		gsl_vector_free(vecY_bak);
+		{
+			TRI_RECOVER(ema0, ema1, ema2);
+			if((unsigned long)ecMatA != ema0) ecMatA = (void*)ema0;
+			free(ecMatA);
+		}
+		{
+			TRI_RECOVER(evx0, evx1, evx2);
+			if((unsigned long)ecVecX != evx0) ecVecX = (void*)evx0;
+			free(ecVecX);
+		}
+		{
+			TRI_RECOVER(evy0, evy1, evy2);
+			if((unsigned long)ecVecY != evy0) ecVecY = (void*)evy0;
+			free(ecVecY);
+		}
 		DBG(printf("Released.\n"));
 	} else {
 		DBG(printf("Oops. Something wrong trying to free the memory. Giving up freeing."));
@@ -1233,7 +1265,7 @@ void GSL_BLAS_DSYRK_FT3(CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t trans,
 	my_stopwatch_stop(3);
 	my_stopwatch_checkpoint(11); // Time spent in checks
 	ResetIsEqualKnob(); // RK's checkers requires larger tolerance, perhaps, perhaps ...
-	AdjustIsEqualKnob(2);
+	AdjustIsEqualKnob(3);
 	isEqual = Is_GSL_DSYRK_Equal2(uplo, trans, alpha, A, beta, C_bak, C); // May use Equal or Equal2
 	my_stopwatch_stop(11);
 	if(isEqual==1) { DBG(printf("[DSYRK_FT3]Result: Equal\n")); }
@@ -1252,6 +1284,16 @@ void GSL_BLAS_DSYRK_FT3(CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t trans,
 	DBG(printf("[DSYRK_FT3]Releasing memory for C_bak\n"));
 	SUPERSETJMP("Just before free");
 	if(jmpret == 0) {
+		{
+			TRI_RECOVER(emc0, emc1, emc2);
+			if((unsigned long)ecMatC != emc0) ecMatC = (void*)emc0;
+			free(ecMatC);
+		}
+		{
+			TRI_RECOVER(ema0, ema1, ema2);
+			if((unsigned long)ecMatA != ema0) ecMatA = (void*)ema0;
+			free(ecMatA);
+		}
 		gsl_matrix_free(C_bak);
 		DBG(printf("Released.\n"));
 	} else {
@@ -1361,7 +1403,20 @@ void GSL_BLAS_DTRSV_FT3(CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t TransA,
 	}
 	my_stopwatch_stop(6); 
 	DBG(printf("[DTRSV_FT]Releasing memory for X_bak\n"));
-	gsl_vector_free(X_bak);
+	SUPERSETJMP("Just before freeing memory");
+	if(jmpret == 0) {
+		{
+			TRI_RECOVER(ema0, ema1, ema2);
+			if((unsigned long)ecMatA != ema0) ecMatA = (void*)ema0;
+			free(ecMatA);
+		}
+		{
+			TRI_RECOVER(evx0, evx1, evx2);
+			if((unsigned long)ecVecX != evx0) ecVecX = (void*)evx0;
+			free(ecVecX);
+		}
+		gsl_vector_free(X_bak);
+	}
 	DBG(printf("Released.\n"));
 	MY_REMOVE_SIGSEGV_HANDLER();
 }
