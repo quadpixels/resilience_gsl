@@ -1,5 +1,5 @@
 LIBTARGET	:= libGSLERROR
-SOURCES		:= $(wildcard *.c)n
+SOURCES		:= $(wildcard *.c)
 CFLAGS		:= -DADD_ -I../GSL-include
 CXXFLAGS	:= -DADD_ -I../GSL-include
 

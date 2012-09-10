@@ -1134,6 +1134,7 @@ void GSL_BLAS_DGEMV_FT3(CBLAS_TRANSPOSE_t Trans, double alpha,
 			  // and copying back to Y
 			  	DBG(printf("[DGEMV_FT3]Recovering Y ... \n"));
 				TRI_RECOVER(vecYbak0, vecYbak1, vecYbak2);
+				if((unsigned long)vecY_bak!=vecYbak0) vecY_bak=(gsl_vector*)vecYbak0; 
 				size_t *vybs = &(((gsl_vector*)vecY_bak)->size);
 				TRI_RECOVER_SIZE_T((*vybs), vys0, vys1, vys2); // Y and Y_bak share
 				size_t *vybst= &(((gsl_vector*)vecY_bak)->stride);
@@ -1144,6 +1145,7 @@ void GSL_BLAS_DGEMV_FT3(CBLAS_TRANSPOSE_t Trans, double alpha,
 				MY_VEC_CHK_RECOVER_POECC(sumY, (void*)evy0, (gsl_vector*)vecYbak0);
 				
 				TRI_RECOVER(vecY0, vecY1, vecY2);
+				if((unsigned long)vecY != vecY0) vecY = (gsl_vector*)vecY0;
 				size_t *vys  = &(((gsl_vector*)vecY)->size);
 				TRI_RECOVER_SIZE_T((*vys),  vys0, vys1, vys2);
 				size_t* vyst = &(((gsl_vector*)vecY)->stride);
@@ -1532,6 +1534,7 @@ void GSL_LINALG_CHOLESKY_DECOMP_FT3(gsl_matrix* A)
 	ResetIsEqualKnob();
 	my_stopwatch_stop(6);
 	DBG(printf("[GSL_LINALG_CHOLESKY_DECOMP_FT3] Releasing memory\n"));
+	SUPERSETJMP("Just before free");
 	if(jmpret == 0)
 	{
 		TRI_RECOVER(ema0, ema1, ema2);

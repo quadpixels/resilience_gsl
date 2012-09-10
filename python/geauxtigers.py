@@ -59,6 +59,7 @@ re_myptr_1 = "\[MyPtr](.*\t)+.*";
 re_dump = ">>.*";
 re_entered_handler = r" >> Caught SIGSEGV signal \((?P<sigsegv_num>[0-9]+) out of [0-9]+ allowed\)"
 re_poke_instcnt = "__POKE__ InstCount: (?P<instcnt>[0-9]+).*";
+re_poke_rndnums = "__POKE__ Generated (?P<rndnums>[0-9]+) random numbers";
 re_sig_summary = "\[MySigsegvHandler\].*"                        
 re_fir = r">> FastLowPassFir correct \((?P<fir_correct>[0-9]+)/(?P<fir_incorrect>[0-9]+)/(?P<fir_total>[0-9]+)/(?P<fir_recalc>[0-9]+)\).*";
 re_fftrecalc = r">> FFT recalculation: (?P<fft_recalc>[0-9]+).*";
