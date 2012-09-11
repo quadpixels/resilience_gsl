@@ -2,9 +2,6 @@
 
 // Use this to stop the compiler from removing sigsetjmp!
 static int dummy_1 = 0;
-noinline void trick_me_jr(int jmpret) {
-	if(jmpret == 999) printf("Jack is in the box!\n");
-}
 noinline
 unsigned long trick_me_ptr(unsigned long ptr, int delta) {
 	return ptr + delta;
