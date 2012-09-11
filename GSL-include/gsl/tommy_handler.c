@@ -12,6 +12,10 @@ int _count = 0;
 int _countmax = 20;
 int num_total_retries = 0;
 
+noinline void trick_me_jr(int jmpret) {
+	if(jmpret == 999) printf("Jack is in the box!\n");
+}
+
 noinline
 unsigned int GetJmpBufChecksum(jmp_buf* buf) {
 	unsigned int ret = 0; int i=0;
