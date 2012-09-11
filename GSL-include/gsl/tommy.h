@@ -58,6 +58,7 @@ extern "C" {
 void MY_SET_SIGSEGV_HANDLER();
 void MY_REMOVE_SIGSEGV_HANDLER();
 void MY_SIGSEGV_HANDLER_SUMMARY();
+void trick_me_jr(int);
 unsigned int GetJmpBufChecksum(jmp_buf*);
 void do_backtrace();
 void my_action(int sig);
