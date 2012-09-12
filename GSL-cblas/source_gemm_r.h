@@ -78,6 +78,17 @@
   REAL_TRY(1) {
     for (k = 0; k < K; k++) {
       for (i = 0; i < n1; i++) {
+	    /* Handler stuff */
+		{
+			SUPERSETJMP("Second inner loop of REAL_TRY_1");
+			BASE c_ij;
+			if(jmpret==0) {
+			  c_ij = C[ldc*i+j]; 
+			} else {
+			  printf("k=%d i=%d\n", k, i);
+			  C[ldc*i+j] = c_ij;
+			}
+		}
         const BASE temp = alpha * F[ldf * i + k];
         if (temp != 0.0) {
           for (j = 0; j < n2; j++) {
@@ -96,6 +107,19 @@
     for (i = 0; i < n1; i++) {
       for (j = 0; j < n2; j++) {
         BASE temp = 0.0;
+		/* Handler stuff */
+		{
+			SUPERSETJMP("Second inner loop of REAL_TRY(2)");
+			BASE c_ij;
+			if(jmpret == 0) {
+				c_ij = C[ldc*i+j];
+			} else {
+				printf("i=%d j=%d\n", i, j);
+				C[ldc*i+j] = c_ij;
+				temp = 0;
+			}
+		}
+		
         for (k = 0; k < K; k++) {
           temp += F[ldf * i + k] * G[ldg * j + k];
         }
@@ -109,6 +133,17 @@
   REAL_TRY(3) {
     for (k = 0; k < K; k++) {
       for (i = 0; i < n1; i++) {
+	  	/* Handler stuff */
+	    {
+			SUPERSETJMP("Second inner loop of REAL_TRY(3)");
+			BASE c_ij;
+			if(jmpret == 0) {
+				c_ij = C[ldc*i+j];
+			} else {
+				printf("k=%d i=%d\n", k, i);
+				C[ldc*i+j] = c_ij;
+			}
+		}
         const BASE temp = alpha * F[ldf * k + i];
         if (temp != 0.0) {
           for (j = 0; j < n2; j++) {
@@ -125,6 +160,17 @@
     for (i = 0; i < n1; i++) {
       for (j = 0; j < n2; j++) {
         BASE temp = 0.0;
+		/* Handler stuff */
+		{
+			SUPERSETJMP("Second inner loop of REAL_TRY(4)");
+			BASE c_ij;
+			if(jmpret == 0) {
+				c_ij = C[ldc*i+j];
+			} else { 
+				printf("i=%d j=%d\n", i, j);
+				C[ldc*i+j] = c_ij; 
+			}
+		}
         for (k = 0; k < K; k++) {
           temp += F[ldf * k + i] * G[ldg * j + k];
         }
