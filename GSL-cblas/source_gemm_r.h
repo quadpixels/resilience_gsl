@@ -17,10 +17,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-// Branch urb 
-
 {
-  int jmpret = 0; // For installing signal handler!
+  int jmpret = 0;
   INDEX i, j, k;
   INDEX n1, n2;
   INDEX ldf, ldg;
@@ -54,14 +52,12 @@
   REAL_TRY(0) {
   if (beta == 0.0) {
     for (i = 0; i < n1; i++) {
-	  SUPERSETJMP("Second inner loop of beta==0.0");
       for (j = 0; j < n2; j++) {
         C[ldc * i + j] = 0.0;
       }
     }
   } else if (beta != 1.0) {
     for (i = 0; i < n1; i++) {
-	  SUPERSETJMP("Second inner loop of beta!=1.0");
       for (j = 0; j < n2; j++) {
         C[ldc * i + j] *= beta;
       }
@@ -76,24 +72,11 @@
 
     /* form  C := alpha*A*B + C */
   REAL_TRY(1) {
+  
+  /* The original code */
+  /*
     for (k = 0; k < K; k++) {
       for (i = 0; i < n1; i++) {
-	    /* Handler stuff */
-		{
-			SUPERSETJMP("Second inner loop of REAL_TRY_1");
-			BASE c_ij;
-			if(jmpret==0) {
-			  c_ij = C[ldc*i+j]; 
-			} else {
-			#define PRINT_ALL \
-			  printf("i=%d, j=%d, k=%d, n1=%d, n2=%d, ldf=%d, ldg=%d, ldc=%d\n", \
-			  	i, j, k, n1, n2, ldf, ldg, ldc); \
-			  printf("C=%lx, F=%lx, G=%lx\n", (unsigned long)C, (unsigned long)F,\
-			    (unsigned long)G);
-			  PRINT_ALL;
-			  C[ldc*i+j] = c_ij;
-			}
-		}
         const BASE temp = alpha * F[ldf * i + k];
         if (temp != 0.0) {
           for (j = 0; j < n2; j++) {
@@ -102,6 +85,27 @@
         }
       }
     }
+  */
+  /* The new code */
+  for(i=0; i<n1; i++) {
+  	for(j=0; j<n2; j++) {
+	  BASE temp = 0;
+	  /* Resilience */
+	  BASE c_ij = C[ldc*i+j];
+	  SUPERSETJMP("REAL_TRY(1) - rewritten");
+	  if(jmpret != 0) {
+	    printf(">> REAL_TRY(1) i=%d j=%d\n", i, j);
+	    C[ldc*i+j] = c_ij;
+		temp = 0;
+	  }
+	  for(k=0; k<K; k++) {
+	  	temp = temp + F[ldf*i+k] * G[ldg*k+j];
+	  }
+	  temp = temp * alpha;
+	  C[ldc*i+j] += temp;
+	}
+  }
+  
   } REAL_CATCH(1) {} REAL_END(1);
 
   } else if (TransF == CblasNoTrans && TransG == CblasTrans) {
@@ -112,19 +116,14 @@
     for (i = 0; i < n1; i++) {
       for (j = 0; j < n2; j++) {
         BASE temp = 0.0;
-		/* Handler stuff */
-		{
-			SUPERSETJMP("Second inner loop of REAL_TRY(2)");
-			BASE c_ij;
-			if(jmpret == 0) {
-				c_ij = C[ldc*i+j];
-			} else {
-				PRINT_ALL;
-				C[ldc*i+j] = c_ij;
-				temp = 0;
-			}
+		/* Resilience */
+		BASE c_ij = C[ldc*i+j];
+		SUPERSETJMP("REAL_TRY(2) - rewritten");
+		if(jmpret != 0) {
+		  printf(">> REAL_TRY(2) i=%d j=%d\n", i, j);
+		  C[ldc*i+j] = c_ij;
+		  temp = 0;
 		}
-		
         for (k = 0; k < K; k++) {
           temp += F[ldf * i + k] * G[ldg * j + k];
         }
@@ -136,19 +135,9 @@
   } else if (TransF == CblasTrans && TransG == CblasNoTrans) {
 
   REAL_TRY(3) {
+  /* The original code */ /*
     for (k = 0; k < K; k++) {
       for (i = 0; i < n1; i++) {
-	  	/* Handler stuff */
-	    {
-			SUPERSETJMP("Second inner loop of REAL_TRY(3)");
-			BASE c_ij;
-			if(jmpret == 0) {
-				c_ij = C[ldc*i+j];
-			} else {
-				PRINT_ALL;
-				C[ldc*i+j] = c_ij;
-			}
-		}
         const BASE temp = alpha * F[ldf * k + i];
         if (temp != 0.0) {
           for (j = 0; j < n2; j++) {
@@ -157,6 +146,25 @@
         }
       }
     }
+  */ 
+  /* The new code */
+  for(i=0; i<n1; i++) {
+  	for(j=0; j<n2; j++) {
+	  BASE temp = 0;
+	  BASE c_ij = C[ldc*i+j];
+	  SUPERSETJMP("REAL_TRY(3) - rewritten");
+	  if(jmpret != 0) {
+	    printf(">> REAL_TRY(3) i=%d j=%d\n", i, j);
+		C[ldc*i+j] = c_ij;
+		temp = 0;
+	  }
+	  for(k=0; k<K; k++) {
+	  	temp = temp + F[ldf*k+i] * G[ldg*k+j];
+	  }
+	  temp = temp * alpha;
+	  C[ldc*i+j] += temp;
+	}
+  }
   } REAL_CATCH(3) {} REAL_END(3);
 
   } else if (TransF == CblasTrans && TransG == CblasTrans) {
@@ -165,16 +173,12 @@
     for (i = 0; i < n1; i++) {
       for (j = 0; j < n2; j++) {
         BASE temp = 0.0;
-		/* Handler stuff */
-		{
-			SUPERSETJMP("Second inner loop of REAL_TRY(4)");
-			BASE c_ij;
-			if(jmpret == 0) {
-				c_ij = C[ldc*i+j];
-			} else { 
-				PRINT_ALL;
-				C[ldc*i+j] = c_ij; 
-			}
+		BASE c_ij = C[ldc*i+j];
+		SUPERSETJMP("REAL_TRY(4) - rewritten");
+		if(jmpret != 0) {
+		  printf(">> REAL_TRY(4) i=%d j=%d\n", i, j);
+		  C[ldc*i+j] = c_ij;
+		  temp = 0;
 		}
         for (k = 0; k < K; k++) {
           temp += F[ldf * k + i] * G[ldg * j + k];
@@ -188,4 +192,3 @@
     BLAS_ERROR("unrecognized operation");
   }
 }
-#undef PRINT_ALL
