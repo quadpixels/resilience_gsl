@@ -85,7 +85,12 @@
 			if(jmpret==0) {
 			  c_ij = C[ldc*i+j]; 
 			} else {
-			  printf("k=%d i=%d\n", k, i);
+			#define PRINT_ALL \
+			  printf("i=%d, j=%d, k=%d, n1=%d, n2=%d, ldf=%d, ldg=%d, ldc=%d\n", \
+			  	i, j, k, n1, n2, ldf, ldg, ldc); \
+			  printf("C=%lx, F=%lx, G=%lx\n", (unsigned long)C, (unsigned long)F,\
+			    (unsigned long)G);
+			  PRINT_ALL;
 			  C[ldc*i+j] = c_ij;
 			}
 		}
@@ -114,7 +119,7 @@
 			if(jmpret == 0) {
 				c_ij = C[ldc*i+j];
 			} else {
-				printf("i=%d j=%d\n", i, j);
+				PRINT_ALL;
 				C[ldc*i+j] = c_ij;
 				temp = 0;
 			}
@@ -140,7 +145,7 @@
 			if(jmpret == 0) {
 				c_ij = C[ldc*i+j];
 			} else {
-				printf("k=%d i=%d\n", k, i);
+				PRINT_ALL;
 				C[ldc*i+j] = c_ij;
 			}
 		}
@@ -167,7 +172,7 @@
 			if(jmpret == 0) {
 				c_ij = C[ldc*i+j];
 			} else { 
-				printf("i=%d j=%d\n", i, j);
+				PRINT_ALL;
 				C[ldc*i+j] = c_ij; 
 			}
 		}
@@ -183,3 +188,4 @@
     BLAS_ERROR("unrecognized operation");
   }
 }
+#undef PRINT_ALL
