@@ -17,7 +17,10 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
+// Branch urb
+
 {
+  int jmpret = 0; // For installing signal handler!
   INDEX i, j, k;
   INDEX n1, n2;
   INDEX ldf, ldg;
@@ -51,12 +54,14 @@
   REAL_TRY(0) {
   if (beta == 0.0) {
     for (i = 0; i < n1; i++) {
+	  SUPERSETJMP("Second inner loop of beta==0.0");
       for (j = 0; j < n2; j++) {
         C[ldc * i + j] = 0.0;
       }
     }
   } else if (beta != 1.0) {
     for (i = 0; i < n1; i++) {
+	  SUPERSETJMP("Second inner loop of beta!=1.0");
       for (j = 0; j < n2; j++) {
         C[ldc * i + j] *= beta;
       }
