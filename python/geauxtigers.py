@@ -65,3 +65,5 @@ re_fir = r">> FastLowPassFir correct \((?P<fir_correct>[0-9]+)/(?P<fir_incorrect
 re_fftrecalc = r">> FFT recalculation: (?P<fft_recalc>[0-9]+).*";
 re_pass4 = r">> Pass 4 recalculation: (?P<pass4_recalc>[0-9]+).*";
 re_stopwatch = r"\[my_stopwatch_show #(?P<sw_id>[0-9]+)\] (?P<microsec>[0-9]+) microseconds \((P?<desc>.*)\).*";
+re_num_retries = "\[FT3\] # of retries - (?P<routine>.*): (?P<retries>[0-9]+).*"
+re_ft3test_rmsd = "\[FT3Test (?P<routine>.*)\].*RMSD=(?P<rmsd>.*)"
