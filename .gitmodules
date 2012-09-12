@@ -1,0 +1,3 @@
+[submodule "GSL-include/gsl"]
+	path = GSL-include/gsl
+	url = /home/nitroglycerine/work/softerror_tommy/
