@@ -41,6 +41,7 @@ class KillerThread(threading.Thread):
 			try:
 				os.kill(self.pid, signal.SIGKILL)
 				self.pipe.kill();
+				print "Killed -- ran out of time!"
 			except OSError, e:
 				print "OSError"
 				pass
