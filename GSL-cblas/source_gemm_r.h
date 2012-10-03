@@ -18,7 +18,6 @@
  */
 
 {
-  int jmpret = 0;
   INDEX i, j, k;
   INDEX n1, n2;
   INDEX ldf, ldg;
@@ -72,9 +71,6 @@
 
     /* form  C := alpha*A*B + C */
   REAL_TRY(1) {
-  
-  /* The original code */
-  /*
     for (k = 0; k < K; k++) {
       for (i = 0; i < n1; i++) {
         const BASE temp = alpha * F[ldf * i + k];
@@ -85,27 +81,6 @@
         }
       }
     }
-  */
-  /* The new code */
-  for(i=0; i<n1; i++) {
-  	for(j=0; j<n2; j++) {
-	  BASE temp = 0;
-	  /* Resilience */
-	  BASE c_ij = C[ldc*i+j];
-	  SUPERSETJMP("REAL_TRY(1) - rewritten");
-	  if(jmpret != 0) {
-	    printf(">> REAL_TRY(1) i=%d j=%d\n", i, j);
-	    C[ldc*i+j] = c_ij;
-		temp = 0;
-	  }
-	  for(k=0; k<K; k++) {
-	  	temp = temp + F[ldf*i+k] * G[ldg*k+j];
-	  }
-	  temp = temp * alpha;
-	  C[ldc*i+j] += temp;
-	}
-  }
-  
   } REAL_CATCH(1) {} REAL_END(1);
 
   } else if (TransF == CblasNoTrans && TransG == CblasTrans) {
@@ -116,14 +91,6 @@
     for (i = 0; i < n1; i++) {
       for (j = 0; j < n2; j++) {
         BASE temp = 0.0;
-		/* Resilience */
-		BASE c_ij = C[ldc*i+j];
-		SUPERSETJMP("REAL_TRY(2) - rewritten");
-		if(jmpret != 0) {
-		  printf(">> REAL_TRY(2) i=%d j=%d\n", i, j);
-		  C[ldc*i+j] = c_ij;
-		  temp = 0;
-		}
         for (k = 0; k < K; k++) {
           temp += F[ldf * i + k] * G[ldg * j + k];
         }
@@ -135,7 +102,6 @@
   } else if (TransF == CblasTrans && TransG == CblasNoTrans) {
 
   REAL_TRY(3) {
-  /* The original code */ /*
     for (k = 0; k < K; k++) {
       for (i = 0; i < n1; i++) {
         const BASE temp = alpha * F[ldf * k + i];
@@ -146,25 +112,6 @@
         }
       }
     }
-  */ 
-  /* The new code */
-  for(i=0; i<n1; i++) {
-  	for(j=0; j<n2; j++) {
-	  BASE temp = 0;
-	  BASE c_ij = C[ldc*i+j];
-	  SUPERSETJMP("REAL_TRY(3) - rewritten");
-	  if(jmpret != 0) {
-	    printf(">> REAL_TRY(3) i=%d j=%d\n", i, j);
-		C[ldc*i+j] = c_ij;
-		temp = 0;
-	  }
-	  for(k=0; k<K; k++) {
-	  	temp = temp + F[ldf*k+i] * G[ldg*k+j];
-	  }
-	  temp = temp * alpha;
-	  C[ldc*i+j] += temp;
-	}
-  }
   } REAL_CATCH(3) {} REAL_END(3);
 
   } else if (TransF == CblasTrans && TransG == CblasTrans) {
@@ -173,13 +120,6 @@
     for (i = 0; i < n1; i++) {
       for (j = 0; j < n2; j++) {
         BASE temp = 0.0;
-		BASE c_ij = C[ldc*i+j];
-		SUPERSETJMP("REAL_TRY(4) - rewritten");
-		if(jmpret != 0) {
-		  printf(">> REAL_TRY(4) i=%d j=%d\n", i, j);
-		  C[ldc*i+j] = c_ij;
-		  temp = 0;
-		}
         for (k = 0; k < K; k++) {
           temp += F[ldf * k + i] * G[ldg * j + k];
         }
