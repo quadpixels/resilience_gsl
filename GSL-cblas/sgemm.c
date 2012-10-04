@@ -4,6 +4,22 @@
 #include <gsl/tommy.h>
 #include "cblas.h"
 #include "../real.h"
+#include <setjmp.h>
+#include <errno.h>
+
+static volatile int fault_count_mm = 0;
+static const int fault_limit_mm = 10;
+static jmp_buf buf_mm;
+
+static void gemm_handler(int sig, siginfo_t* si, void* unused) {
+	printf("[sgemm_handler]\n");
+	printf(" >> Caught SIGSEGV signal (%d out of %d allowed)",
+		fault_count_mm, fault_limit_mm);
+	if(fault_count_mm < fault_limit_mm)
+		siglongjmp(buf_mm, 1);
+	else
+		siglongjmp(buf, 1);
+}
 
 void
 cblas_sgemm (const enum CBLAS_ORDER Order, const enum CBLAS_TRANSPOSE TransA,
