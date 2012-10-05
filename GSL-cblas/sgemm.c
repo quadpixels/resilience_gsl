@@ -10,6 +10,7 @@
 static volatile int fault_count_mm = 0;
 static const int fault_limit_mm = 10;
 static jmp_buf buf_mm;
+static INDEX i, j, k;
 
 static void gemm_handler(int sig, siginfo_t* si, void* unused) {
 	printf("[sgemm_handler]\n");

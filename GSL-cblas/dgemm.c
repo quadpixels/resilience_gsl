@@ -11,9 +11,10 @@
 static volatile int fault_count_mm = 0;
 static const int fault_limit_mm = 10;
 static jmp_buf buf_mm;
+volatile static INDEX i, j, k;
 
 static void gemm_handler(int sig, siginfo_t* si, void* unused) {
-	printf("[dgemm handler]\n");
+	printf("[dgemm handler] i=%d j=%d k=%d\n", i, j, k);
 	printf(" >> Caught SIGSEGV signal (%d out of %d allowed)",
 		fault_count_mm, fault_limit_mm);
 	if(fault_count_mm < fault_limit_mm)

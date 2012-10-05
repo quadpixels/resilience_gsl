@@ -18,7 +18,7 @@
  */
 
 {
-  volatile INDEX i, j, k;
+  printf("Addr of i, j, k=%p, %p, %p\n", &i, &j, &k);
   INDEX n1, n2;
   INDEX ldf, ldg;
   int TransF, TransG;
@@ -54,11 +54,12 @@
 
   /* form  y := beta*y */
   REAL_TRY(0) {
+  INDEX i, j ;
 
   if (beta == 0.0) {
 
-	i=0; j=0;
     if(sigsetjmp(buf_mm, 1) == 0) {
+		i=0; j=0; // KB123332
     } else {
     	printf("[MM y:=beta*y case 1] i=%d j=%d\n", i, j);
     }
@@ -71,8 +72,8 @@
     }
   } else if (beta != 1.0) {
 
-	i=0; j=0;
 	if(sigsetjmp(buf_mm, 1) == 0) {
+		i=0; j=0; // KB123332
 	} else {
 		printf("[MM y:=beta*y case 2] i=%d j=%d\n", i, j);
 	}
@@ -93,9 +94,9 @@
 
     /* form  C := alpha*A*B + C */
   REAL_TRY(1) {
-    i = 0; j = 0; k = 0;
 
     if(sigsetjmp(buf_mm, 1) == 0) {
+		i=0; j=0; k=0; // ?????? KB123332
 	} else {
 		printf("[MM Branch 1] i=%d j=%d k=%d\n",
 			i, j, k);
@@ -120,8 +121,8 @@
     /* form  C := alpha*A*B' + C */
 
   REAL_TRY(2) {
-	i=0; j=0;
 	if(sigsetjmp(buf_mm, 1) == 0) {
+		i=0; j=0; // KB123332
 	} else {
 		printf("[MM branch 2] i=%d j=%d\n",
 			i, j);
@@ -142,8 +143,8 @@
   } else if (TransF == CblasTrans && TransG == CblasNoTrans) {
 
   REAL_TRY(3) {
-    i=0; j=0; k=0;
 	if(sigsetjmp(buf_mm, 1) == 0) {
+		i=0; j=0; k=0; // KB123332
 	} else {
 		printf("[MM branch 3] i=%d j=%d k=%d\n",
 			i, j, k);
@@ -165,9 +166,9 @@
 
   } else if (TransF == CblasTrans && TransG == CblasTrans) {
 
-  REAL_TRY(4) {
-    i=0; j=0;
+  REAL_TRY(4) {	
 	if(sigsetjmp(buf_mm, 1) == 0) {
+		i=0; j=0; // KB123332
 	} else {
 		printf("[MM branch 4] i=%d j=%d k=%d\n",
 			i, j);
