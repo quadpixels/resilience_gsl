@@ -18,7 +18,9 @@
  */
 
 {
-  volatile INDEX i, j, k;
+ // INDEX i, j, k;
+  p_i = &i; p_j = &j; p_k = &k;
+  printf(" >> p_i=%p, p_j=%p, p_k=%p\n", p_i, p_j, p_k);
   INDEX n1, n2;
   INDEX ldf, ldg;
   int TransF, TransG;
@@ -60,6 +62,7 @@
 	i=0; j=0;
     if(sigsetjmp(buf_mm, 1) == 0) {
     } else {
+		i = i_1; j = j_1;
     	printf("[MM y:=beta*y case 1] i=%d j=%d\n", i, j);
     }
 
@@ -74,6 +77,7 @@
 	i=0; j=0;
 	if(sigsetjmp(buf_mm, 1) == 0) {
 	} else {
+		i = i_1; j = j_1;
 		printf("[MM y:=beta*y case 2] i=%d j=%d\n", i, j);
 	}
 
@@ -97,6 +101,7 @@
 
     if(sigsetjmp(buf_mm, 1) == 0) {
 	} else {
+		i = i_1; j = j_1; k = k_1;
 		printf("[MM Branch 1] i=%d j=%d k=%d\n",
 			i, j, k);
 	}
@@ -123,6 +128,7 @@
 	i=0; j=0;
 	if(sigsetjmp(buf_mm, 1) == 0) {
 	} else {
+		i = i_1; j = j_1;
 		printf("[MM branch 2] i=%d j=%d\n",
 			i, j);
 	}
@@ -145,6 +151,7 @@
     i=0; j=0; k=0;
 	if(sigsetjmp(buf_mm, 1) == 0) {
 	} else {
+		i = i_1; j = j_1; k = k_1;
 		printf("[MM branch 3] i=%d j=%d k=%d\n",
 			i, j, k);
 	}
@@ -169,7 +176,8 @@
     i=0; j=0;
 	if(sigsetjmp(buf_mm, 1) == 0) {
 	} else {
-		printf("[MM branch 4] i=%d j=%d k=%d\n",
+		i = i_1; j = j_1;
+		printf("[MM branch 4] i=%d j=%d\n",
 			i, j);
 	}
     for (; i < n1; i++) {

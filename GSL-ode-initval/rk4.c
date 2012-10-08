@@ -50,23 +50,23 @@
 
 // How many instances of 'k' should be protected ?
 // Choose from 0,1,2,3,4,5,6,7 (because there are only 7 uses of k in rk4_step)
-#define K_PROTECT 7
+//#define K_PROTECT 7
 // How many times would each pair of replica of 'k' be used ?
 // Choose from 1,2,3,4,5,6,7
-#define K_REPLICA_PAIRS 7
+//#define K_REPLICA_PAIRS 7
 
 // Same as 'k'
 // There are 4 occurrances of 'y'
-#define Y_PROTECT 4
-#define Y_REPLICA_PAIRS 4
+//#define Y_PROTECT 4
+//#define Y_REPLICA_PAIRS 4
 
 // There are 3 ocurrances of 'y0'
-#define Y0_PROTECT 3
-#define Y0_REPLICA_PAIRS 3
+//#define Y0_PROTECT 3
+//#define Y0_REPLICA_PAIRS 3
 
 // There are 6 occurrances of 'ytmp'
-#define YTMP_PROTECT 6
-#define YTMP_REPLICA_PAIRS 6
+//#define YTMP_PROTECT 6
+//#define YTMP_REPLICA_PAIRS 6
 
 
 /* For accounting on 2012-07-28 */
