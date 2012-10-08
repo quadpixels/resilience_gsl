@@ -12,6 +12,7 @@ static volatile int fault_count_mm = 0;
 static const int fault_limit_mm = 10;
 static jmp_buf buf_mm;
 volatile static INDEX i, j, k;
+extern gsl_matrix* C_bak_mm;
 
 static void gemm_handler(int sig, siginfo_t* si, void* unused) {
 	printf("[dgemm handler] i=%d j=%d k=%d\n", i, j, k);

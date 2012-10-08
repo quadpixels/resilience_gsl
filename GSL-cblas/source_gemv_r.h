@@ -41,13 +41,25 @@
   /* form  y := beta*y */
   REAL_TRY(0) {
   if (beta == 0.0) {
-    INDEX iy = OFFSET(lenY, incY);
-    for (i = 0; i < lenY; i++) {
+    volatile INDEX iy;
+	if(sigsetjmp(buf_mv, 1) == 0) {
+		i = 0;
+		iy = OFFSET(lenY, incY);
+	} else {
+		
+	}
+
+    for (; i < lenY; i++) {
       Y[iy] = 0.0;
       iy += incY;
     }
   } else if (beta != 1.0) {
-    INDEX iy = OFFSET(lenY, incY);
+    volatile INDEX iy;\
+	if(sigsetjmp(buf_mv, 1) == 0) {
+		iy = OFFSET(lenY, incY);
+	} else {
+		
+	}
     for (i = 0; i < lenY; i++) {
       Y[iy] *= beta;
       iy += incY;

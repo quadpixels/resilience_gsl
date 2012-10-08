@@ -54,14 +54,14 @@
 
   /* form  y := beta*y */
   REAL_TRY(0) {
-  INDEX i, j ;
 
   if (beta == 0.0) {
+  	INDEX j; // Declare j locally, non-volatile.
 
     if(sigsetjmp(buf_mm, 1) == 0) {
 		i=0; j=0; // KB123332
     } else {
-    	printf("[MM y:=beta*y case 1] i=%d j=%d\n", i, j);
+		i = 0; j = 0;
     }
 
     for (; i < n1; i++) {
@@ -94,7 +94,6 @@
 
     /* form  C := alpha*A*B + C */
   REAL_TRY(1) {
-
     if(sigsetjmp(buf_mm, 1) == 0) {
 		i=0; j=0; k=0; // ?????? KB123332
 	} else {
@@ -109,10 +108,10 @@
           for (; j < n2; j++) {
             C[ldc * i + j] += temp * G[ldg * k + j];
           }
-		  j = 0;
+          j = 0;
         }
       }
-	  i = 0;
+      i = 0;
     }
   } REAL_CATCH(1) {} REAL_END(1);
 
@@ -121,6 +120,7 @@
     /* form  C := alpha*A*B' + C */
 
   REAL_TRY(2) {
+  	INDEX k;
 	if(sigsetjmp(buf_mm, 1) == 0) {
 		i=0; j=0; // KB123332
 	} else {
@@ -146,8 +146,8 @@
 	if(sigsetjmp(buf_mm, 1) == 0) {
 		i=0; j=0; k=0; // KB123332
 	} else {
-		printf("[MM branch 3] i=%d j=%d k=%d\n",
-			i, j, k);
+		printf("[MM branch 3] i=%d k=%d\n",
+			i, k);
 	}
 
     for (; k < K; k++) {
@@ -157,16 +157,18 @@
           for (; j < n2; j++) {
             C[ldc * i + j] += temp * G[ldg * k + j];
           }
-		  j = 0;
+          j=0;
         }
       }
-	  i = 0;
+	  i=0;
     }
+    k=0;
   } REAL_CATCH(3) {} REAL_END(3);
 
   } else if (TransF == CblasTrans && TransG == CblasTrans) {
 
-  REAL_TRY(4) {	
+  REAL_TRY(4) {
+  	INDEX k;
 	if(sigsetjmp(buf_mm, 1) == 0) {
 		i=0; j=0; // KB123332
 	} else {

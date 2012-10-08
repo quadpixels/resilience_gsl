@@ -2,6 +2,11 @@
 #include <gsl/gsl_cblas.h>
 #include "cblas.h"
 #include "../real.h"
+#include <setjmp.h>
+
+static jmp_buf buf_mv;
+
+static volatile INDEX i, j, lenX, lenY;
 
 void
 cblas_sgemv (const enum CBLAS_ORDER order, const enum CBLAS_TRANSPOSE TransA,
