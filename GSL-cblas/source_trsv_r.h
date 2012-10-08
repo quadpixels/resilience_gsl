@@ -20,10 +20,15 @@
 
 {
   const int nonunit = (Diag == CblasNonUnit);
-  INDEX ix, jx;
-  INDEX i, j;
+//  INDEX ix, jx;
+//  INDEX i, j;
   const int Trans = (TransA != CblasConjTrans) ? TransA : CblasTrans;
 
+  struct sigaction sa;
+  sigemptyset(&sa.sa_mask);
+  sa.sa_sigaction = trsv_handler;
+  if(sigaction(SIGSEGV, &sa, NULL) == -1) exit(EXIT_FAILURE);
+  
   if (N == 0)
     return;
 
@@ -32,13 +37,22 @@
   if ((order == CblasRowMajor && Trans == CblasNoTrans && Uplo == CblasUpper)
       || (order == CblasColMajor && Trans == CblasTrans && Uplo == CblasLower)) {
   REAL_TRY(0){
+  	INDEX j; // j should not be volatile
     /* backsubstitution */
     ix = OFFSET(N, incX) + incX * (N - 1);
+    
     if (nonunit) {
       X[ix] = X[ix] / A[lda * (N - 1) + (N - 1)];
     }
     ix -= incX;
-    for (i = N - 1; i > 0 && i--;) {
+    
+    if(sigsetjmp(buf_sv, 1) == 0) {
+    	i = N-1;
+    	printf("[SV: case 1, back.subst.]\n");
+    } else {
+    }
+    
+    for (/*i = N - 1*/; i > 0 && i--;) {
       BASE tmp = X[ix];
       jx = ix + incX;
       for (j = i + 1; j < N; j++) {
@@ -57,13 +71,21 @@
   } else if ((order == CblasRowMajor && Trans == CblasNoTrans && Uplo == CblasLower)
              || (order == CblasColMajor && Trans == CblasTrans && Uplo == CblasUpper)) {
   REAL_TRY(1) {
+  	INDEX j; // j should not be volatile
     /* forward substitution */
     ix = OFFSET(N, incX);
     if (nonunit) {
       X[ix] = X[ix] / A[lda * 0 + 0];
     }
     ix += incX;
-    for (i = 1; i < N; i++) {
+    
+    if(sigsetjmp(buf_sv, 1) == 0) {
+    	i = 1;
+    	printf("[SV: case 2, fwd. subst.]\n");
+    } else {
+    }
+    
+    for (; i < N; i++) {
       BASE tmp = X[ix];
       jx = OFFSET(N, incX);
       for (j = 0; j < i; j++) {
@@ -82,6 +104,7 @@
   } else if ((order == CblasRowMajor && Trans == CblasTrans && Uplo == CblasUpper)
              || (order == CblasColMajor && Trans == CblasNoTrans && Uplo == CblasLower)) {
   REAL_TRY(2) {
+  	INDEX j; // j should not be volatile
     /* form  x := inv( A' )*x */
 
     /* forward substitution */
@@ -90,7 +113,14 @@
       X[ix] = X[ix] / A[lda * 0 + 0];
     }
     ix += incX;
-    for (i = 1; i < N; i++) {
+    
+    if(sigsetjmp(buf_sv, 1) == 0) {
+    	i = 1;
+    	printf("[SV: case 3, fwd. subst.]\n");
+    } else {
+    }
+    
+    for (; i < N; i++) {
       BASE tmp = X[ix];
       jx = OFFSET(N, incX);
       for (j = 0; j < i; j++) {
@@ -109,13 +139,21 @@
   } else if ((order == CblasRowMajor && Trans == CblasTrans && Uplo == CblasLower)
              || (order == CblasColMajor && Trans == CblasNoTrans && Uplo == CblasUpper)) {
   REAL_TRY(3) {
+  	INDEX j;
     /* backsubstitution */
     ix = OFFSET(N, incX) + (N - 1) * incX;
     if (nonunit) {
       X[ix] = X[ix] / A[lda * (N - 1) + (N - 1)];
     }
     ix -= incX;
-    for (i = N - 1; i > 0 && i--;) {
+    
+    if(sigsetjmp(buf_sv, 1) == 0) {
+    	printf("[SV: case 4, back subst.]\n");
+    	i = N-1;
+    } else {
+    }
+    
+    for (; i > 0 && i--;) {
       BASE tmp = X[ix];
       jx = ix + incX;
       for (j = i + 1; j < N; j++) {

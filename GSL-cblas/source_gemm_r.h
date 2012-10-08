@@ -18,9 +18,7 @@
  */
 
 {
- // INDEX i, j, k;
-  p_i = &i; p_j = &j; p_k = &k;
-  printf(" >> p_i=%p, p_j=%p, p_k=%p\n", p_i, p_j, p_k);
+  printf("Addr of i, j, k=%p, %p, %p\n", &i, &j, &k);
   INDEX n1, n2;
   INDEX ldf, ldg;
   int TransF, TransG;
@@ -58,12 +56,12 @@
   REAL_TRY(0) {
 
   if (beta == 0.0) {
+  	INDEX j; // Declare j locally, non-volatile.
 
-	i=0; j=0;
     if(sigsetjmp(buf_mm, 1) == 0) {
+		i=0; j=0; // KB123332
     } else {
-		i = i_1; j = j_1;
-    	printf("[MM y:=beta*y case 1] i=%d j=%d\n", i, j);
+		i = 0; j = 0;
     }
 
     for (; i < n1; i++) {
@@ -74,8 +72,8 @@
     }
   } else if (beta != 1.0) {
 
-	i=0; j=0;
 	if(sigsetjmp(buf_mm, 1) == 0) {
+		i=0; j=0; // KB123332
 	} else {
 		i = i_1; j = j_1;
 		printf("[MM y:=beta*y case 2] i=%d j=%d\n", i, j);
@@ -97,27 +95,36 @@
 
     /* form  C := alpha*A*B + C */
   REAL_TRY(1) {
-    i = 0; j = 0; k = 0;
-
+  	INDEX i, j;
+  	BASE* curr_c = (BASE*)malloc(sizeof(BASE) * n1 * n2);
+  	memset(curr_c, 0x00, sizeof(BASE) * n1 * n2);
     if(sigsetjmp(buf_mm, 1) == 0) {
+		i=0; j=0; k=0; // ?????? KB123332
 	} else {
-		i = i_1; j = j_1; k = k_1;
-		printf("[MM Branch 1] i=%d j=%d k=%d\n",
-			i, j, k);
+		printf("[MM Branch 1] k=%d\n",
+			k);
+		long ii; for(ii=0; ii<n1*n2; ii++) {
+			C[ii] = curr_c[ii]; // Roll back to the start of this K loop
+		}
 	}
 
     for (; k < K; k++) {
-      for (; i < n1; i++) {
+      for (i=0; i < n1; i++) {
         const BASE temp = alpha * F[ldf * i + k];
         if (temp != 0.0) {
-          for (; j < n2; j++) {
+          for (j=0; j < n2; j++) {
             C[ldc * i + j] += temp * G[ldg * k + j];
           }
-		  j = 0;
+          j = 0;
         }
       }
-	  i = 0;
+      i = 0;
+      // Back-up
+      long ii; for(ii=0; ii<n1*n2; ii++) {
+      	  curr_c[ii] = C[ii];
+      }
     }
+    free(curr_c);
   } REAL_CATCH(1) {} REAL_END(1);
 
   } else if (TransF == CblasNoTrans && TransG == CblasTrans) {
@@ -125,8 +132,9 @@
     /* form  C := alpha*A*B' + C */
 
   REAL_TRY(2) {
-	i=0; j=0;
+  	INDEX k;
 	if(sigsetjmp(buf_mm, 1) == 0) {
+		i=0; j=0; // KB123332
 	} else {
 		i = i_1; j = j_1;
 		printf("[MM branch 2] i=%d j=%d\n",
@@ -148,33 +156,42 @@
   } else if (TransF == CblasTrans && TransG == CblasNoTrans) {
 
   REAL_TRY(3) {
-    i=0; j=0; k=0;
+  	INDEX i, j;
+  	BASE* curr_c = (BASE*)malloc(sizeof(BASE) * n1 * n2);
+	memset(curr_c, 0x00, sizeof(BASE) * n1 * n2);
 	if(sigsetjmp(buf_mm, 1) == 0) {
+		i=0; j=0; k=0; // KB123332
 	} else {
-		i = i_1; j = j_1; k = k_1;
-		printf("[MM branch 3] i=%d j=%d k=%d\n",
-			i, j, k);
+		printf("[MM branch 3] i=%d k=%d\n",
+			i, k);
+		long ii; for(ii=0; ii<n1*n2; ii++) {
+			C[ii] = curr_c[ii]; // roll back to the start of this K loop
+		}
 	}
 
     for (; k < K; k++) {
-      for (; i < n1; i++) {
+      for (i=0; i < n1; i++) {
         const BASE temp = alpha * F[ldf * k + i];
         if (temp != 0.0) {
-          for (; j < n2; j++) {
+          for (j=0; j < n2; j++) {
             C[ldc * i + j] += temp * G[ldg * k + j];
           }
-		  j = 0;
         }
       }
-	  i = 0;
+	  // Back-up
+	  long ii; for(ii=0; ii<n1*n2; ii++) {
+	  	  curr_c[ii] = C[ii];
+	  }
     }
+    k=0;
   } REAL_CATCH(3) {} REAL_END(3);
 
   } else if (TransF == CblasTrans && TransG == CblasTrans) {
 
   REAL_TRY(4) {
-    i=0; j=0;
+  	INDEX k;
 	if(sigsetjmp(buf_mm, 1) == 0) {
+		i=0; j=0; // KB123332
 	} else {
 		i = i_1; j = j_1;
 		printf("[MM branch 4] i=%d j=%d\n",
