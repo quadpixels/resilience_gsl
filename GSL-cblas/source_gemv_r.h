@@ -19,9 +19,14 @@
 
 /* 2012-01-13 Modified by cs */
 {
-  INDEX i, j;
   INDEX lenX, lenY;
-
+	
+  
+  struct sigaction sa;
+  sigemptyset(&sa.sa_mask);
+  sa.sa_sigaction = gemv_handler;
+  if(sigaction(SIGSEGV, &sa, NULL) == -1) exit(EXIT_FAILURE);
+  
   const int Trans = (TransA != CblasConjTrans) ? TransA : CblasTrans;
 
   if (M == 0 || N == 0)
@@ -41,9 +46,7 @@
   /* form  y := beta*y */
   REAL_TRY(0) {
   if (beta == 0.0) {
-    volatile INDEX iy;
 	if(sigsetjmp(buf_mv, 1) == 0) {
-		i = 0;
 		iy = OFFSET(lenY, incY);
 	} else {
 		
@@ -54,7 +57,6 @@
       iy += incY;
     }
   } else if (beta != 1.0) {
-    volatile INDEX iy;\
 	if(sigsetjmp(buf_mv, 1) == 0) {
 		iy = OFFSET(lenY, incY);
 	} else {
@@ -74,13 +76,21 @@
 	REAL_TRY(1) {
     /* form  y := alpha*A*x + y */
     INDEX iy = OFFSET(lenY, incY);
-    for (i = 0; i < lenY; i++) {
+    
+    if(sigsetjmp(buf_mv, 1) == 0) {
+    	i=0; j=0;
+    } else {
+    	
+    }
+    
+    for (; i < lenY; i++) {
       BASE temp = 0.0;
       INDEX ix = OFFSET(lenX, incX);
-      for (j = 0; j < lenX; j++) {
+      for (; j < lenX; j++) {
         temp += X[ix] * A[lda * i + j];
         ix += incX;
       }
+      j=0;
       Y[iy] += alpha * temp;
       iy += incY;
     }
@@ -90,14 +100,22 @@
     /* form  y := alpha*A'*x + y */
 	REAL_TRY(2) {
     INDEX ix = OFFSET(lenX, incX);
-    for (j = 0; j < lenX; j++) {
+    
+    if(sigsetjmp(buf_mv, 1) == 0) {
+    	i=0; j=0;
+    } else {
+    	
+    }
+    
+    for (; j < lenX; j++) {
       const BASE temp = alpha * X[ix];
       if (temp != 0.0) {
         INDEX iy = OFFSET(lenY, incY);
-        for (i = 0; i < lenY; i++) {
+        for (; i < lenY; i++) {
           Y[iy] += temp * A[lda * j + i];
           iy += incY;
         }
+        i=0;
       }
       ix += incX;
     }

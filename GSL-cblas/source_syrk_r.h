@@ -21,6 +21,11 @@
 {
   INDEX i, j, k;
   int uplo, trans;
+  
+  struct sigaction sa;
+  sigemptyset(&sa.sa_mask);
+  sa.sa_sigaction = syrk_handler;
+  if(sigaction(SIGSEGV, &sa, NULL) == -1) exit(EXIT_FAILURE);
 
   if (alpha == 0.0 && beta == 1.0)
     return;
@@ -41,6 +46,7 @@
   /* form  y := beta*y */
   if (beta == 0.0) {
 REAL_TRY(0) {
+	INDEX i, j;
     if (uplo == CblasUpper) {
       for (i = 0; i < N; i++) {
         for (j = i; j < N; j++) {
@@ -57,6 +63,7 @@ REAL_TRY(0) {
 } REAL_CATCH(0) {} REAL_END(0);
   } else if (beta != 1.0) {
 REAL_TRY(1) {
+	INDEX i, j;
     if (uplo == CblasUpper) {
       for (i = 0; i < N; i++) {
         for (j = i; j < N; j++) {
@@ -78,50 +85,75 @@ REAL_TRY(1) {
 
   if (uplo == CblasUpper && trans == CblasNoTrans) {
 REAL_TRY(2) {
-    for (i = 0; i < N; i++) {
-      for (j = i; j < N; j++) {
+	INDEX k;
+	if(sigsetjmp(buf_rk, 1) == 0) {
+		i = 0; j = i;
+	} else {
+	}
+	
+    for (/*i = 0*/; i < N; i++) {
+      for (/*j = i*/; j < N; j++) {
         BASE temp = 0.0;
         for (k = 0; k < K; k++) {
           temp += A[i * lda + k] * A[j * lda + k];
         }
         C[i * ldc + j] += alpha * temp;
       }
+      j = (i+1);
     }
 } REAL_CATCH(2) {} REAL_END(2);
   } else if (uplo == CblasUpper && trans == CblasTrans) {
 REAL_TRY(3) {
-    for (i = 0; i < N; i++) {
-      for (j = i; j < N; j++) {
+	INDEX k;
+	if(sigsetjmp(buf_rk, 1) == 0) {
+		i = 0; j = i;
+	} else {
+	}
+	
+    for (/*i = 0*/; i < N; i++) {
+      for (/*j = i*/; j < N; j++) {
         BASE temp = 0.0;
         for (k = 0; k < K; k++) {
           temp += A[k * lda + i] * A[k * lda + j];
         }
         C[i * ldc + j] += alpha * temp;
       }
+      j = (i+1);
     }
 } REAL_CATCH(3) {} REAL_END(3);
   } else if (uplo == CblasLower && trans == CblasNoTrans) {
 REAL_TRY(4) {
-    for (i = 0; i < N; i++) {
-      for (j = 0; j <= i; j++) {
+	INDEX k;
+	if(sigsetjmp(buf_rk, 1) == 0) {
+		i = 0; j=0;
+	}
+    for (/*i = 0*/; i < N; i++) {
+      for (/*j = 0*/; j <= i; j++) {
         BASE temp = 0.0;
         for (k = 0; k < K; k++) {
           temp += A[i * lda + k] * A[j * lda + k];
         }
         C[i * ldc + j] += alpha * temp;
       }
+      j = 0;
     }
 } REAL_CATCH(4) {} REAL_END(4);
   } else if (uplo == CblasLower && trans == CblasTrans) {
 REAL_TRY(5) {
-    for (i = 0; i < N; i++) {
-      for (j = 0; j <= i; j++) {
+	INDEX k;
+	if(sigsetjmp(buf_rk, 1) == 0) {
+		i = 0; j = 0;
+	} else {
+	}
+    for (/*i = 0*/; i < N; i++) {
+      for (/*j = 0*/; j <= i; j++) {
         BASE temp = 0.0;
         for (k = 0; k < K; k++) {
           temp += A[k * lda + i] * A[k * lda + j];
         }
         C[i * ldc + j] += alpha * temp;
       }
+      j = 0;
     }
 } REAL_CATCH(5) {} REAL_END(5);
   } else {
