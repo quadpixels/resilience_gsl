@@ -21,6 +21,7 @@
 {
   INDEX i, j, k;
   int uplo, trans;
+  BASE* curr_c = (BASE*)malloc(sizeof(BASE) * N);
   
   struct sigaction sa;
   sigemptyset(&sa.sa_mask);
@@ -85,78 +86,91 @@ REAL_TRY(1) {
 
   if (uplo == CblasUpper && trans == CblasNoTrans) {
 REAL_TRY(2) {
-	INDEX k;
+	INDEX j, k;
 	if(sigsetjmp(buf_rk, 1) == 0) {
 		i = 0; j = i;
+		memset(curr_c, 0x00, sizeof(BASE)*N);
 	} else {
+		memcpy(&C[i*ldc], curr_c, sizeof(BASE)*N); 
 	}
 	
     for (/*i = 0*/; i < N; i++) {
-      for (/*j = i*/; j < N; j++) {
+      for (j = i; j < N; j++) {
         BASE temp = 0.0;
         for (k = 0; k < K; k++) {
           temp += A[i * lda + k] * A[j * lda + k];
         }
         C[i * ldc + j] += alpha * temp;
       }
+      memcpy(curr_c, &C[i*ldc], sizeof(BASE)*N);
       j = (i+1);
     }
 } REAL_CATCH(2) {} REAL_END(2);
   } else if (uplo == CblasUpper && trans == CblasTrans) {
 REAL_TRY(3) {
-	INDEX k;
+	INDEX k, j;
 	if(sigsetjmp(buf_rk, 1) == 0) {
 		i = 0; j = i;
 	} else {
+		memcpy(&C[i*ldc], curr_c, sizeof(BASE)*N);
 	}
 	
     for (/*i = 0*/; i < N; i++) {
-      for (/*j = i*/; j < N; j++) {
+      for (j = i; j < N; j++) {
         BASE temp = 0.0;
         for (k = 0; k < K; k++) {
           temp += A[k * lda + i] * A[k * lda + j];
         }
         C[i * ldc + j] += alpha * temp;
       }
+      memcpy(curr_c, &C[i*ldc], sizeof(BASE)*N);
       j = (i+1);
     }
 } REAL_CATCH(3) {} REAL_END(3);
   } else if (uplo == CblasLower && trans == CblasNoTrans) {
 REAL_TRY(4) {
-	INDEX k;
+	INDEX k, j;
 	if(sigsetjmp(buf_rk, 1) == 0) {
 		i = 0; j=0;
+	} else {
+		memcpy(&C[i*ldc], curr_c, sizeof(BASE)*N);
 	}
     for (/*i = 0*/; i < N; i++) {
-      for (/*j = 0*/; j <= i; j++) {
+      for (j = 0; j <= i; j++) {
         BASE temp = 0.0;
         for (k = 0; k < K; k++) {
           temp += A[i * lda + k] * A[j * lda + k];
         }
         C[i * ldc + j] += alpha * temp;
       }
+      memcpy(curr_c, &C[i*ldc], sizeof(BASE)*N);
       j = 0;
     }
 } REAL_CATCH(4) {} REAL_END(4);
   } else if (uplo == CblasLower && trans == CblasTrans) {
 REAL_TRY(5) {
-	INDEX k;
+	INDEX k, j;
 	if(sigsetjmp(buf_rk, 1) == 0) {
 		i = 0; j = 0;
 	} else {
+		memcpy(&C[i*ldc], curr_c, sizeof(BASE)*N);
 	}
     for (/*i = 0*/; i < N; i++) {
-      for (/*j = 0*/; j <= i; j++) {
+      for (j = 0; j <= i; j++) {
         BASE temp = 0.0;
         for (k = 0; k < K; k++) {
           temp += A[k * lda + i] * A[k * lda + j];
         }
         C[i * ldc + j] += alpha * temp;
       }
+      memcpy(curr_c, &C[i*ldc], sizeof(BASE)*N);
       j = 0;
     }
 } REAL_CATCH(5) {} REAL_END(5);
   } else {
     BLAS_ERROR("unrecognized operation");
   }
+  
+  
+  free(curr_c);
 }
