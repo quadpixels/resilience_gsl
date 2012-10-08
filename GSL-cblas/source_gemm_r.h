@@ -94,25 +94,36 @@
 
     /* form  C := alpha*A*B + C */
   REAL_TRY(1) {
+  	INDEX i, j;
+  	BASE* curr_c = (BASE*)malloc(sizeof(BASE) * n1 * n2);
+  	memset(curr_c, 0x00, sizeof(BASE) * n1 * n2);
     if(sigsetjmp(buf_mm, 1) == 0) {
 		i=0; j=0; k=0; // ?????? KB123332
 	} else {
-		printf("[MM Branch 1] i=%d j=%d k=%d\n",
-			i, j, k);
+		printf("[MM Branch 1] k=%d\n",
+			k);
+		long ii; for(ii=0; ii<n1*n2; ii++) {
+			C[ii] = curr_c[ii]; // Roll back to the start of this K loop
+		}
 	}
 
     for (; k < K; k++) {
-      for (; i < n1; i++) {
+      for (i=0; i < n1; i++) {
         const BASE temp = alpha * F[ldf * i + k];
         if (temp != 0.0) {
-          for (; j < n2; j++) {
+          for (j=0; j < n2; j++) {
             C[ldc * i + j] += temp * G[ldg * k + j];
           }
           j = 0;
         }
       }
       i = 0;
+      // Back-up
+      long ii; for(ii=0; ii<n1*n2; ii++) {
+      	  curr_c[ii] = C[ii];
+      }
     }
+    free(curr_c);
   } REAL_CATCH(1) {} REAL_END(1);
 
   } else if (TransF == CblasNoTrans && TransG == CblasTrans) {
@@ -143,24 +154,32 @@
   } else if (TransF == CblasTrans && TransG == CblasNoTrans) {
 
   REAL_TRY(3) {
+  	INDEX i, j;
+  	BASE* curr_c = (BASE*)malloc(sizeof(BASE) * n1 * n2);
+	memset(curr_c, 0x00, sizeof(BASE) * n1 * n2);
 	if(sigsetjmp(buf_mm, 1) == 0) {
 		i=0; j=0; k=0; // KB123332
 	} else {
 		printf("[MM branch 3] i=%d k=%d\n",
 			i, k);
+		long ii; for(ii=0; ii<n1*n2; ii++) {
+			C[ii] = curr_c[ii]; // roll back to the start of this K loop
+		}
 	}
 
     for (; k < K; k++) {
-      for (; i < n1; i++) {
+      for (i=0; i < n1; i++) {
         const BASE temp = alpha * F[ldf * k + i];
         if (temp != 0.0) {
-          for (; j < n2; j++) {
+          for (j=0; j < n2; j++) {
             C[ldc * i + j] += temp * G[ldg * k + j];
           }
-          j=0;
         }
       }
-	  i=0;
+	  // Back-up
+	  long ii; for(ii=0; ii<n1*n2; ii++) {
+	  	  curr_c[ii] = C[ii];
+	  }
     }
     k=0;
   } REAL_CATCH(3) {} REAL_END(3);
