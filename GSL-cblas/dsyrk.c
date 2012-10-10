@@ -13,6 +13,7 @@ static const int fault_limit_rk = 10;
 static jmp_buf buf_rk;
 
 static void syrk_handler(int sig, siginfo_t* si, void* unused) {
+	puts(" >> Routine rollback (RK)");
 	if(++fault_count_rk < fault_limit_rk) 
 		siglongjmp(buf_rk, 1);
 	else

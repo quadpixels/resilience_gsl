@@ -15,9 +15,7 @@ static jmp_buf buf_mm;
 volatile static INDEX i, j, k;
 
 static void gemm_handler(int sig, siginfo_t* si, void* unused) {
-	printf("[dgemm handler] i=%d j=%d k=%d\n", i, j, k);
-	printf(" >> Caught SIGSEGV signal (%d out of %d allowed)",
-		fault_count_mm, fault_limit_mm);
+	puts(" >> Routine rollback (MM)");
 	if(++fault_count_mm < fault_limit_mm)
 		siglongjmp(buf_mm, 1); // Revert to re-entry
 	else
