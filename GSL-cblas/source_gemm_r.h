@@ -75,7 +75,6 @@
 	if(sigsetjmp(buf_mm, 1) == 0) {
 		i=0; j=0; // KB123332
 	} else {
-		i = i_1; j = j_1;
 		printf("[MM y:=beta*y case 2] i=%d j=%d\n", i, j);
 	}
 
@@ -136,7 +135,6 @@
 	if(sigsetjmp(buf_mm, 1) == 0) {
 		i=0; j=0; // KB123332
 	} else {
-		i = i_1; j = j_1;
 		printf("[MM branch 2] i=%d j=%d\n",
 			i, j);
 	}
@@ -193,7 +191,6 @@
 	if(sigsetjmp(buf_mm, 1) == 0) {
 		i=0; j=0; // KB123332
 	} else {
-		i = i_1; j = j_1;
 		printf("[MM branch 4] i=%d j=%d\n",
 			i, j);
 	}
