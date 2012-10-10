@@ -14,10 +14,6 @@ static const int fault_limit_mm = 10;
 static jmp_buf buf_mm;
 volatile static INDEX i, j, k;
 
-static INDEX i, j, k;
-volatile sig_atomic_t i_1, j_1, k_1;
-static volatile INDEX *p_i, *p_j, *p_k;
-
 static void gemm_handler(int sig, siginfo_t* si, void* unused) {
 	printf("[dgemm handler] i=%d j=%d k=%d\n", i, j, k);
 	printf(" >> Caught SIGSEGV signal (%d out of %d allowed)",
