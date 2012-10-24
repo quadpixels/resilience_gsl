@@ -8,8 +8,9 @@
 #include <errno.h>
 
 static volatile INDEX i, j, k;
+static volatile int i1, i2;
 static volatile int fault_count_rk = 0;
-static const int fault_limit_rk = 10;
+static const int fault_limit_rk = 1;
 static jmp_buf buf_rk;
 
 static void syrk_handler(int sig, siginfo_t* si, void* unused) {

@@ -88,13 +88,16 @@ REAL_TRY(1) {
 REAL_TRY(2) {
 	INDEX j, k;
 	if(sigsetjmp(buf_rk, 1) == 0) {
-		i = 0; j = i;
+		i=0;
+//		i1=i2=0;
+		j = i;
 		memset(curr_c, 0x00, sizeof(BASE)*N);
 	} else {
+//		if(i!=i1 && i1==i2) i=i2;
 		memcpy(&C[i*ldc], curr_c, sizeof(BASE)*N); 
 	}
 	
-    for (/*i = 0*/; i < N; i++) {
+    for (/*i = 0*/; i < N; i++, i1++, i2++) {
       for (j = i; j < N; j++) {
         BASE temp = 0.0;
         for (k = 0; k < K; k++) {
@@ -110,12 +113,15 @@ REAL_TRY(2) {
 REAL_TRY(3) {
 	INDEX k, j;
 	if(sigsetjmp(buf_rk, 1) == 0) {
-		i = 0; j = i;
+		i = 0;
+//		i1=i2=0;
+		j = i;
 	} else {
+//		if(i != i1 && i1==i2) i=i1;
 		memcpy(&C[i*ldc], curr_c, sizeof(BASE)*N);
 	}
 	
-    for (/*i = 0*/; i < N; i++) {
+    for (/*i = 0*/; i < N; i++, i1++, i2++) {
       for (j = i; j < N; j++) {
         BASE temp = 0.0;
         for (k = 0; k < K; k++) {
@@ -131,11 +137,14 @@ REAL_TRY(3) {
 REAL_TRY(4) {
 	INDEX k, j;
 	if(sigsetjmp(buf_rk, 1) == 0) {
-		i = 0; j=0;
+		i=0;
+//		i1=i2=0; 
+		j=0;
 	} else {
+//		if(i!=i1 && i1==i2) i=i1;
 		memcpy(&C[i*ldc], curr_c, sizeof(BASE)*N);
 	}
-    for (/*i = 0*/; i < N; i++) {
+    for (/*i = 0*/; i < N; i++, i1++, i2++) {
       for (j = 0; j <= i; j++) {
         BASE temp = 0.0;
         for (k = 0; k < K; k++) {
@@ -151,11 +160,14 @@ REAL_TRY(4) {
 REAL_TRY(5) {
 	INDEX k, j;
 	if(sigsetjmp(buf_rk, 1) == 0) {
-		i = 0; j = 0;
+		i=0;
+//		i1=i2=0;
+		j = 0;
 	} else {
+//		if(i!=i1 && i1==i2) i=i2;
 		memcpy(&C[i*ldc], curr_c, sizeof(BASE)*N);
 	}
-    for (/*i = 0*/; i < N; i++) {
+    for (/*i = 0*/; i < N; i++, i1++, i2++) {
       for (j = 0; j <= i; j++) {
         BASE temp = 0.0;
         for (k = 0; k < K; k++) {
