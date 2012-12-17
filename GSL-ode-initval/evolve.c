@@ -28,6 +28,9 @@
 
 #include "odeiv_util.h"
 
+#include <gsl/tommy.h>
+#include <gsl/triplicate.h>
+
 gsl_odeiv_evolve *
 gsl_odeiv_evolve_alloc (size_t dim)
 {
@@ -110,13 +113,74 @@ gsl_odeiv_evolve_free (gsl_odeiv_evolve * e)
  *
  * Uses an adaptive step control object
  */
+
+static int evolve_call_count = 100;
+static bool is_alloced = false;
+static gsl_odeiv_evolve* e_bak;
+static gsl_odeiv_control* con_bak;
+static gsl_odeiv_step* step_bak;
+static gsl_odeiv_system* dydt_bak;
+static int dimension;
+static double* t_bak;
+static double* h_bak;
+static double* y_bak;
+static unsigned long y_0, y_1, y_2;
+
+int gsl_odeiv_evolve_apply_actual(gsl_odeiv_evolve* e,
+	gsl_odeiv_control* con, gsl_odeiv_step* step, const gsl_odeiv_system* dydt,
+	double* t, double t1, double* h, double y[]);
+
+int gsl_odeiv_evolve_apply(gsl_odeiv_evolve* e,
+	gsl_odeiv_control* con, gsl_odeiv_step* step, const gsl_odeiv_system* dydt,
+	double* t, double t1, double* h, double y[]) 
+{
+// FT
+	int ret;
+#ifdef FT3
+	if(evolve_call_count++ >= 100) {
+		if(is_alloced == false) {	
+			e_bak = (gsl_odeiv_evolve*)malloc(sizeof(gsl_odeiv_evolve));
+			con_bak = (gsl_odeiv_control*)malloc(sizeof(gsl_odeiv_control));
+			step_bak = (gsl_odeiv_step*)malloc(sizeof(gsl_odeiv_step));
+			dydt_bak = (gsl_odeiv_system*)malloc(sizeof(gsl_odeiv_system));
+			dimension = e->dimension;
+			y_bak = (double*)malloc(sizeof(double) * dimension);
+			is_alloced = true;
+			TRIPLICATE(y, y_0, y_1, y_2);
+		}
+		memcpy(e_bak, e, sizeof(gsl_odeiv_evolve));
+		memcpy(con_bak, con, sizeof(gsl_odeiv_control));
+		memcpy(step_bak, step, sizeof(gsl_odeiv_step));
+		memcpy(dydt_bak, dydt, sizeof(gsl_odeiv_system));
+		memcpy(y_bak, y, sizeof(double)*dimension);
+	}
+	int jmpret;
+	SUPERSETJMP("Before gsl_odeiv_evolve_apply_actual");
+	if(jmpret != 0) {
+		memcpy(e, e_bak, sizeof(gsl_odeiv_evolve));
+		memcpy(con, con_bak, sizeof(gsl_odeiv_control));
+		memcpy(step, step_bak, sizeof(gsl_odeiv_step));
+
+		gsl_odeiv_system* p_dydt = (gsl_odeiv_system*)dydt;
+		memcpy(p_dydt, dydt_bak, sizeof(gsl_odeiv_system));
+		
+		memcpy(y, y_bak, sizeof(double)*dimension);
+		TRI_RECOVER(y_0, y_1, y_2);
+		if((long)y != y_0) y = (double*)y_0;
+	}
+#endif
+	ret = gsl_odeiv_evolve_apply_actual(e, con, step, dydt, t, t1, h, y);
+	return ret;
+}
+
 int
-gsl_odeiv_evolve_apply (gsl_odeiv_evolve * e,
+gsl_odeiv_evolve_apply_actual (gsl_odeiv_evolve * e,
                         gsl_odeiv_control * con,
                         gsl_odeiv_step * step,
                         const gsl_odeiv_system * dydt,
                         double *t, double t1, double *h, double y[])
 {
+
   const double t0 = *t;
   double h0 = *h;
   int step_status;
