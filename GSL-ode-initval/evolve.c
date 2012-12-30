@@ -279,7 +279,7 @@ try_step:
 	  {
 	  	for(int i=0; i<dydt->dimension; i++) {
 			double dydt1 = e->dydt_out[i];
-			if(fabs(y[i] - e->y0[i]) > dydt1 * h0 * INTEGRATOR_THRESH) {
+			if(fabs(y[i] - e->y0[i]) > fabs(dydt1 * h0 * INTEGRATOR_THRESH)) {
 				fprintf(stderr, "========MyReTry--------\n");
                 DBL_MEMCPY (y, e->y0, dydt->dimension);
 				is_my_retried = true;
