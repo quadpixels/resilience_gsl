@@ -30,6 +30,7 @@
 
 #include <gsl/tommy.h>
 #include <gsl/triplicate.h>
+#include <gsl/tommy_config.h>
 
 gsl_odeiv_evolve *
 gsl_odeiv_evolve_alloc (size_t dim)
@@ -216,6 +217,8 @@ gsl_odeiv_evolve_apply_actual (gsl_odeiv_evolve * e,
         }
     }
 
+	bool is_my_retried = false;
+
 try_step:
     
   if ((dt >= 0.0 && h0 > dt) || (dt < 0.0 && h0 < dt))
@@ -270,6 +273,21 @@ try_step:
 
       const int hadjust_status 
         = gsl_odeiv_control_hadjust (con, step, y, e->yerr, e->dydt_out, &h0);
+
+	  #ifdef INTEGRATOR_THRESH
+	  if(is_my_retried == false)
+	  {
+	  	for(int i=0; i<dydt->dimension; i++) {
+			double dydt1 = e->dydt_out[i];
+			if(fabs(y[i] - e->y0[i]) > dydt1 * h0 * INTEGRATOR_THRESH) {
+				fprintf(stderr, "========MyReTry--------\n");
+                DBL_MEMCPY (y, e->y0, dydt->dimension);
+				is_my_retried = true;
+                goto try_step;
+			}
+		}
+	  }
+	  #endif
 
       if (hadjust_status == GSL_ODEIV_HADJ_DEC)
         {
