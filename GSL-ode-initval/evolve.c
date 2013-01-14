@@ -137,8 +137,10 @@ int gsl_odeiv_evolve_apply(gsl_odeiv_evolve* e,
 {
 // FT
 	int ret;
-#ifdef FT3
-	if(evolve_call_count++ >= 100) {
+#ifdef FT3AXXX
+	if(evolve_call_count++ >= ODE_HANDLER_INTERVAL) { // Added on January 10
+		evolve_call_count = 0;
+		my_stopwatch_checkpoint(5);
 		if(is_alloced == false) {	
 			e_bak = (gsl_odeiv_evolve*)malloc(sizeof(gsl_odeiv_evolve));
 			con_bak = (gsl_odeiv_control*)malloc(sizeof(gsl_odeiv_control));
@@ -154,6 +156,7 @@ int gsl_odeiv_evolve_apply(gsl_odeiv_evolve* e,
 		memcpy(step_bak, step, sizeof(gsl_odeiv_step));
 		memcpy(dydt_bak, dydt, sizeof(gsl_odeiv_system));
 		memcpy(y_bak, y, sizeof(double)*dimension);
+		my_stopwatch_stop(5);
 	}
 	int jmpret;
 	SUPERSETJMP("Before gsl_odeiv_evolve_apply_actual");

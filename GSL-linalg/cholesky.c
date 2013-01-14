@@ -40,6 +40,8 @@
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_linalg.h>
 
+#include "../real.h"
+
 static inline 
 double
 quiet_sqrt (double x)  
@@ -67,45 +69,66 @@ gsl_linalg_cholesky_decomp (gsl_matrix * A)
        * one can return if the matrix has only 1 or 2 rows.  
        */
 
-      double A_00 = gsl_matrix_get (A, 0, 0);
-      
+      double A_00;
       double L_00 = quiet_sqrt(A_00);
+REAL_TRY(0) {
+//	  A_00 = gsl_matrix_get (A, 0, 0);
+	  A_00 = A->data[0];
+      L_00 = quiet_sqrt(A_00);
+} REAL_CATCH(0) {} REAL_END(0);
       
       if (A_00 <= 0)
         {
           status = GSL_EDOM ;
         }
 
-      gsl_matrix_set (A, 0, 0, L_00);
+//    gsl_matrix_set (A, 0, 0, L_00);
+	  A->data[0] = L_00;
   
       if (M > 1)
         {
-          double A_10 = gsl_matrix_get (A, 1, 0);
-          double A_11 = gsl_matrix_get (A, 1, 1);
+          double A_10;
+          double A_11;
+          double L_10;
+          double diag;
+          double L_11;
+
+	REAL_TRY(1) {
+		  A_10 = A->data[A->tda*1+0]; //gsl_matrix_get (A, 1, 0);
+		  A_11 = A->data[A->tda*1+1];//gsl_matrix_get (A, 1, 1);
           
-          double L_10 = A_10 / L_00;
-          double diag = A_11 - L_10 * L_10;
-          double L_11 = quiet_sqrt(diag);
-          
+		  L_10 = A_10 / L_00;
+		  diag = A_11 - L_10 * L_10;
+		  L_11 = quiet_sqrt(diag);
           if (diag <= 0)
             {
               status = GSL_EDOM;
             }
 
-          gsl_matrix_set (A, 1, 0, L_10);        
-          gsl_matrix_set (A, 1, 1, L_11);
+//          gsl_matrix_set (A, 1, 0, L_10);        
+//          gsl_matrix_set (A, 1, 1, L_11);
+			A->data[A->tda*1 + 0] = L_10;
+			A->data[A->tda*1 + 1] = L_11;
+    } REAL_CATCH(1) {} REAL_END(1);
         }
       
       for (k = 2; k < M; k++)
         {
-          double A_kk = gsl_matrix_get (A, k, k);
+          double A_kk;
+	REAL_TRY(2) {
+		  A_kk = gsl_matrix_get (A, k, k);
+	} REAL_CATCH(2) {} REAL_END(2);
           
           for (i = 0; i < k; i++)
             {
               double sum = 0;
 
-              double A_ki = gsl_matrix_get (A, k, i);
-              double A_ii = gsl_matrix_get (A, i, i);
+              double A_ki;// = gsl_matrix_get (A, k, i);
+              double A_ii;// = gsl_matrix_get (A, i, i);
+			  REAL_TRY(3) {
+			  A_ki = A->data[A->tda*k+i];
+			  A_ii = A->data[A->tda*i+i];
+			 } REAL_CATCH(3) {} REAL_END(3);
 
               gsl_vector_view ci = gsl_matrix_row (A, i);
               gsl_vector_view ck = gsl_matrix_row (A, k);
@@ -116,9 +139,11 @@ gsl_linalg_cholesky_decomp (gsl_matrix * A)
                 
                 gsl_blas_ddot (&di.vector, &dk.vector, &sum);
               }
-
+		REAL_TRY(4) {
               A_ki = (A_ki - sum) / A_ii;
-              gsl_matrix_set (A, k, i, A_ki);
+              //gsl_matrix_set (A, k, i, A_ki);
+			  A->data[A->tda*k + i] = A_ki;
+		} REAL_CATCH(4) {} REAL_END(4);
             } 
 
           {
@@ -126,31 +151,38 @@ gsl_linalg_cholesky_decomp (gsl_matrix * A)
             gsl_vector_view dk = gsl_vector_subvector (&ck.vector, 0, k);
             
             double sum = gsl_blas_dnrm2 (&dk.vector);
-            double diag = A_kk - sum * sum;
-
-            double L_kk = quiet_sqrt(diag);
+            double diag;
+            double L_kk;
+		REAL_TRY(5) {
+			diag = A_kk - sum * sum;
+			L_kk = quiet_sqrt(diag);
             
             if (diag <= 0)
               {
                 status = GSL_EDOM;
               }
             
-            gsl_matrix_set (A, k, k, L_kk);
+//            gsl_matrix_set (A, k, k, L_kk);
+			  A->data[A->tda*k + k] = L_kk;
+		} REAL_CATCH(5) {} REAL_END(5);
           }
         }
 
       /* Now copy the transposed lower triangle to the upper triangle,
        * the diagonal is common.  
        */
-      
+    REAL_TRY(6) {
       for (i = 1; i < M; i++)
         {
           for (j = 0; j < i; j++)
             {
-              double A_ij = gsl_matrix_get (A, i, j);
-              gsl_matrix_set (A, j, i, A_ij);
+			// Injection, injection.
+//              double A_ij = gsl_matrix_get (A, i, j);
+//              gsl_matrix_set (A, j, i, A_ij);
+				A->data[A->tda*j + i] = A->data[A->tda*i + j];
             }
         } 
+	} REAL_CATCH(6) {} REAL_END(6);
       
       if (status == GSL_EDOM)
         {

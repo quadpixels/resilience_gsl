@@ -28,7 +28,7 @@
   } else if (N == 1) {
     return fabs(X[0]);
   }
-
+REAL_TRY(0) {
   for (i = 0; i < N; i++) {
     const BASE x = X[ix];
 
@@ -45,6 +45,7 @@
 
     ix += incX;
   }
+} REAL_CATCH(0) {} REAL_END(0);
 
   return scale * sqrt(ssq);
 }

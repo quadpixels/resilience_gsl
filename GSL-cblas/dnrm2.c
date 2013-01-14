@@ -1,6 +1,7 @@
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_cblas.h>
 #include "cblas.h"
+#include "../real.h"
 
 double
 cblas_dnrm2 (const int N, const double *X, const int incX)
