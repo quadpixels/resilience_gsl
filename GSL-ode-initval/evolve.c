@@ -127,58 +127,8 @@ static double* h_bak;
 static double* y_bak;
 static unsigned long y_0, y_1, y_2;
 
-int gsl_odeiv_evolve_apply_actual(gsl_odeiv_evolve* e,
-	gsl_odeiv_control* con, gsl_odeiv_step* step, const gsl_odeiv_system* dydt,
-	double* t, double t1, double* h, double y[]);
-
-int gsl_odeiv_evolve_apply(gsl_odeiv_evolve* e,
-	gsl_odeiv_control* con, gsl_odeiv_step* step, const gsl_odeiv_system* dydt,
-	double* t, double t1, double* h, double y[]) 
-{
-// FT
-	int ret;
-#ifdef FT3AXXX
-	if(evolve_call_count++ >= ODE_HANDLER_INTERVAL) { // Added on January 10
-		evolve_call_count = 0;
-		my_stopwatch_checkpoint(5);
-		if(is_alloced == false) {	
-			e_bak = (gsl_odeiv_evolve*)malloc(sizeof(gsl_odeiv_evolve));
-			con_bak = (gsl_odeiv_control*)malloc(sizeof(gsl_odeiv_control));
-			step_bak = (gsl_odeiv_step*)malloc(sizeof(gsl_odeiv_step));
-			dydt_bak = (gsl_odeiv_system*)malloc(sizeof(gsl_odeiv_system));
-			dimension = e->dimension;
-			y_bak = (double*)malloc(sizeof(double) * dimension);
-			is_alloced = true;
-			TRIPLICATE(y, y_0, y_1, y_2);
-		}
-		memcpy(e_bak, e, sizeof(gsl_odeiv_evolve));
-		memcpy(con_bak, con, sizeof(gsl_odeiv_control));
-		memcpy(step_bak, step, sizeof(gsl_odeiv_step));
-		memcpy(dydt_bak, dydt, sizeof(gsl_odeiv_system));
-		memcpy(y_bak, y, sizeof(double)*dimension);
-		my_stopwatch_stop(5);
-	}
-	int jmpret;
-	SUPERSETJMP("Before gsl_odeiv_evolve_apply_actual");
-	if(jmpret != 0) {
-		memcpy(e, e_bak, sizeof(gsl_odeiv_evolve));
-		memcpy(con, con_bak, sizeof(gsl_odeiv_control));
-		memcpy(step, step_bak, sizeof(gsl_odeiv_step));
-
-		gsl_odeiv_system* p_dydt = (gsl_odeiv_system*)dydt;
-		memcpy(p_dydt, dydt_bak, sizeof(gsl_odeiv_system));
-		
-		memcpy(y, y_bak, sizeof(double)*dimension);
-		TRI_RECOVER(y_0, y_1, y_2);
-		if((long)y != y_0) y = (double*)y_0;
-	}
-#endif
-	ret = gsl_odeiv_evolve_apply_actual(e, con, step, dydt, t, t1, h, y);
-	return ret;
-}
-
 int
-gsl_odeiv_evolve_apply_actual (gsl_odeiv_evolve * e,
+gsl_odeiv_evolve_apply(gsl_odeiv_evolve * e,
                         gsl_odeiv_control * con,
                         gsl_odeiv_step * step,
                         const gsl_odeiv_system * dydt,
@@ -277,7 +227,7 @@ try_step:
       const int hadjust_status 
         = gsl_odeiv_control_hadjust (con, step, y, e->yerr, e->dydt_out, &h0);
 
-	  #ifdef INTEGRATOR_THRESH
+	  #ifdef INTEGRATOR_THRESHXX
 	  if(is_my_retried == false)
 	  {
 	  	for(int i=0; i<dydt->dimension; i++) {
